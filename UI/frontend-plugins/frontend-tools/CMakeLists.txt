@@ -21,17 +21,20 @@ set(frontend-tools_HEADERS
 	auto-scene-switcher.hpp
 	output-timer.hpp
 	tool-helpers.hpp
+        obsremote.hpp
 	)
 set(frontend-tools_SOURCES
 	${frontend-tools_SOURCES}
 	auto-scene-switcher.cpp
 	frontend-tools.c
 	output-timer.cpp
+        obsremote.cpp
 	)
 set(frontend-tools_UI
 	${frontend-tools_UI}
 	forms/auto-scene-switcher.ui
 	forms/output-timer.ui
+        forms/obsremote.ui
 	)
 
 if(WIN32)
@@ -68,7 +71,7 @@ endif()
 
 qt5_wrap_ui(frontend-tools_UI_HEADERS
 	${frontend-tools_UI}
-	${frontend-tools_PLATFORM_UI})
+        ${frontend-tools_PLATFORM_UI})
 
 add_library(frontend-tools MODULE
 	${frontend-tools_HEADERS}

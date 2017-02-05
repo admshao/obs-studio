@@ -14,22 +14,26 @@ void FreeCaptions();
 
 void InitOutputTimer();
 void FreeOutputTimer();
+void InitOBSRemote();
+void EndOBSRemote();
 
 bool obs_module_load(void)
 {
 #if defined(_WIN32) && BUILD_CAPTIONS
-	InitCaptions();
+    InitCaptions();
 #endif
 	InitSceneSwitcher();
 	InitOutputTimer();
+    	InitOBSRemote();
 	return true;
 }
 
 void obs_module_unload(void)
 {
 #if defined(_WIN32) && BUILD_CAPTIONS
-	FreeCaptions();
+    FreeCaptions();
 #endif
 	FreeSceneSwitcher();
 	FreeOutputTimer();
+    	EndOBSRemote();
 }
