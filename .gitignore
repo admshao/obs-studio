@@ -35,6 +35,7 @@ x64/
 ipch/
 GeneratedFiles/
 .moc/
+.idea/
 
 /other/
 
@@ -89,6 +90,6 @@ tags
 *.lnk
 *.chm
 *~
-.DS_Store
 */.DS_Store
 */**/.DS_Store
+/cmake-build-debug/
