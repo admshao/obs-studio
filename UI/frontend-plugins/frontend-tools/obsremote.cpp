@@ -18,7 +18,7 @@
                 ##__VA_ARGS__)
 
 #define error(format, ...) do_log(LOG_ERROR, format, ##__VA_ARGS__)
-#define debug(format, ...) do_log(LOG_DEBUG, format, ##__VA_ARGS__)
+#define info(format, ...) do_log(LOG_INFO, format, ##__VA_ARGS__)
 
 using namespace std;
 
@@ -65,39 +65,43 @@ OBSRemote::OBSRemote(QWidget *parent) :
 
 void OBSRemoteData::Loop()
 {
-	debug("Loop");
+	info("Loop");
 	chrono::duration<long long, milli> duration =
 		chrono::milliseconds(interval);
 
-	for (;;) {
+	for (;;)
+	{
 		unique_lock<mutex> lock(m);
 
 		cv.wait_for(lock, duration);
-		if (!obsremote->enabled) {
+		if (!obsremote->enabled)
+		{
 			break;
 		}
 
 		duration = chrono::milliseconds(interval);
 
-		debug("Teste");
+		info("Teste");
 	}
 }
 
 void OBSRemoteData::Start()
 {
-	debug("Start");
+	info("Start");
 	if (!obsremote->th.joinable())
 	{
-		debug("Joinable");
-		obsremote->th = thread([] () {obsremote->Loop();});
+		info("Joinable");
+		obsremote->th = thread([]()
+		                       { obsremote->Loop(); });
 	}
 }
 
 void OBSRemoteData::Stop()
 {
-	debug("Stop");
-	if (th.joinable()) {
-		debug("Joinable");
+	info("Stop");
+	if (th.joinable())
+	{
+		info("Joinable");
 		{
 			lock_guard<mutex> lock(m);
 			enabled = false;
@@ -178,13 +182,13 @@ static void SaveOBSRemote(obs_data_t *save_data, bool saving, void *)
 
 void OBSRemote::closeEvent(QCloseEvent *)
 {
-	debug("Window Close");
+	info("Window Close");
 	obs_frontend_save();
 }
 
 extern "C" void EndOBSRemote()
 {
-	debug("End");
+	info("End");
 	delete obsremote;
 	obsremote = nullptr;
 	delete obsr;
@@ -193,10 +197,10 @@ extern "C" void EndOBSRemote()
 
 static void OBSEvent(enum obs_frontend_event event, void *)
 {
-	debug("Event");
+	info("Event");
 	if (event == OBS_FRONTEND_EVENT_EXIT)
 	{
-		debug("Exit");
+		info("Exit");
 		EndOBSRemote();
 	}
 }
@@ -204,7 +208,7 @@ static void OBSEvent(enum obs_frontend_event event, void *)
 extern "C" void InitOBSRemote()
 {
 
-	debug("Init");
+	info("Init");
 	QAction *action = (QAction *) obs_frontend_add_tools_menu_qaction(
 		obs_module_text("OBSRemote"));
 
@@ -217,7 +221,7 @@ extern "C" void InitOBSRemote()
 
 	auto cb = []()
 	{
-		debug("OBSRemote Window Exec");
+		info("OBSRemote Window Exec");
 		obsr->exec();
 	};
 
