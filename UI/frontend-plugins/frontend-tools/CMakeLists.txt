@@ -17,8 +17,6 @@ if(WIN32 OR APPLE)
 		)
 endif()
 
-include_directories(${OBS_LIBWEBSOCKETS_INCLUDE_DIRS})
-
 configure_file(
 	"${CMAKE_CURRENT_SOURCE_DIR}/frontend-tools-config.h.in"
 	"${CMAKE_BINARY_DIR}/config/frontend-tools-config.h")
@@ -79,7 +77,6 @@ target_link_libraries(frontend-tools
 	${frontend-tools_PLATFORM_LIBS}
 	obs-frontend-api
 	Qt5::Widgets
-	${OBS_LIBWEBSOCKETS_IMPORT}
 	libobs)
 
 install_obs_plugin_with_data(frontend-tools data)

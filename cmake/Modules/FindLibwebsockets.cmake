@@ -32,7 +32,7 @@ find_path(Libwebsockets_INCLUDE_DIR
 		/usr/include /usr/local/include /opt/local/include /sw/include)
 
 find_library(Libwebsockets_LIB
-	NAMES ${_LIBWEBSOCKETS_LIBRARIES} libwebsockets liblibwebsockets
+	NAMES ${_LIBWEBSOCKETS_LIBRARIES} libwebsockets
 	HINTS
 		ENV LibwebsocketsPath${_lib_suffix}
 		ENV LibwebsocketsPath
