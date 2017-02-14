@@ -38,7 +38,6 @@ else()
 	set(OBS_JANSSON_INCLUDE_DIRS "${JANSSON_INCLUDE_DIRS}" CACHE INTERNAL "Internal var")
 endif()
 
-# ADD BUILD_OBSREMOTE later?
 find_package(Libwebsockets 1.7 QUIET)
 
 if(NOT LIBWEBSOCKETS_FOUND)
@@ -46,8 +45,8 @@ if(NOT LIBWEBSOCKETS_FOUND)
 
 	add_subdirectory(libwebsockets)
 
-	set(OBS_LIBWEBSOCKETS_IMPORT "libwebsockets" CACHE INTERNAL "Internal var")
-	set(OBS_LIBWEBSOCKETS_INCLUDE_DIRS "" CACHE INTERNAL "Internal var")
+	set(OBS_LIBWEBSOCKETS_IMPORT "${LIBWEBSOCKETS_LIBRARIES}" CACHE INTERNAL "Internal var")
+	set(OBS_LIBWEBSOCKETS_INCLUDE_DIRS "${LIBWEBSOCKETS_INCLUDE_DIRS}" CACHE INTERNAL "Internal var")
 else()
 	message(STATUS "Using system libwebsockets library")
 
