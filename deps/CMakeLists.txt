@@ -38,6 +38,22 @@ else()
 	set(OBS_JANSSON_INCLUDE_DIRS "${JANSSON_INCLUDE_DIRS}" CACHE INTERNAL "Internal var")
 endif()
 
+find_package(Mbedtls 2.0 QUIET)
+
+if(NOT MBEDTLS_FOUND)
+	message(STATUS "mbedtls >=2.0 not found, building bundled version")
+
+	#add_subdirectory(mbedtls)
+
+	#set(OBS_MBEDTLS_IMPORT "mbedtls" CACHE INTERNAL "Internal var")
+	#set(OBS_MBEDTLS_INCLUDE_DIRS "" CACHE INTERNAL "Internal var")
+else()
+	message(STATUS "Using system mbedtls library")
+
+	set(OBS_MBEDTLS_IMPORT "${MBEDTLS_LIBRARIES}" CACHE INTERNAL "Internal var")
+	set(OBS_MBEDTLS_INCLUDE_DIRS "${MBEDTLS_INCLUDE_DIRS}" CACHE INTERNAL "Internal var")
+endif()
+
 find_package(Libwebsockets 1.7 QUIET)
 
 if(NOT LIBWEBSOCKETS_FOUND)
