@@ -32,7 +32,7 @@ find_path(Mbedtls_INCLUDE_DIR
 		/usr/include /usr/local/include /opt/local/include /sw/include)
 
 find_library(Mbedtls_LIB
-	NAMES ${_MBEDTLS_LIBRARIES} mbedtls libmbedtls
+	NAMES ${_MBEDTLS_LIBRARIES} mbedcrypto
 	HINTS
 		ENV MbedtlsPath${_lib_suffix}
 		ENV MbedtlsPath
@@ -64,4 +64,6 @@ if(MBEDTLS_FOUND)
 	set(MBEDTLS_INCLUDE_DIRS ${Mbedtls_INCLUDE_DIR})
 	set(MBEDTLS_LIBRARIES ${Mbedtls_LIB})
 	set(MBEDTLS_VERSION ${_MBEDTLS_VERSION_STRING})
+else()
+	set(MBEDTLS_INCLUDE_DIRS ${CMAKE_BINARY_DIR}/deps/mbedtls/include/)
 endif()
