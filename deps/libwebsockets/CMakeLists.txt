@@ -724,6 +724,7 @@ if (LWS_WITH_STATIC)
 
 	file (COPY ${PROJECT_SOURCE_DIR}/lib/libwebsockets.h
 		DESTINATION ${PROJECT_BINARY_DIR}/include/)
+
 	include_directories (${CMAKE_CURRENT_BINARY_DIR}/include)
 
 	add_library(websockets STATIC
@@ -957,12 +958,12 @@ set(CMAKE_REQUIRED_LIBRARIES ${temp})
 # Generate the lws_config.h that includes all the public compilation settings.
 configure_file(
 	"${PROJECT_SOURCE_DIR}/lws_config.h.in"
-	"${PROJECT_BINARY_DIR}/lws_config.h")
+	"${PROJECT_BINARY_DIR}/include/lws_config.h")
 
 # Generate the lws_config.h that includes all the private compilation settings.
 configure_file(
 	"${PROJECT_SOURCE_DIR}/lws_config_private.h.in"
-	"${PROJECT_BINARY_DIR}/lws_config_private.h")
+	"${PROJECT_BINARY_DIR}/include/lws_config_private.h")
 
 
 
@@ -1468,7 +1469,7 @@ file(RELATIVE_PATH
 	"${LWS_ABSOLUTE_INSTALL_CMAKE_DIR}"
 	"${LWS_ABSOLUTE_INSTALL_INCLUDE_DIR}") # Calculate the relative directory from the cmake dir.
 
-# Note the EVENT_CMAKE_DIR is defined in JanssonConfig.cmake.in,
+# Note the EVENT_CMAKE_DIR is defined in LibwebsocketsConfig.cmake.in,
 # we escape it here so it's evaluated when it is included instead
 # so that the include dirs are given relative to where the
 # config file is located.
