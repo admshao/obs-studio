@@ -539,7 +539,7 @@ set(HDR_PRIVATE
 
 set(HDR_PUBLIC
 	"${PROJECT_SOURCE_DIR}/lib/libwebsockets.h"
-	"${PROJECT_BINARY_DIR}/lws_config.h")
+	"${PROJECT_BINARY_DIR}/include/lws_config.h")
 
 set(SOURCES
 	lib/base64-decode.c
