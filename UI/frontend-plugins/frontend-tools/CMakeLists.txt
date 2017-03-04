@@ -1,9 +1,9 @@
 project(frontend-tools)
 
-if(APPLE)
+if (APPLE)
 	find_library(COCOA Cocoa)
 	include_directories(${COCOA})
-endif()
+endif ()
 
 if(UNIX AND NOT APPLE)
 	find_package(X11 REQUIRED)
@@ -21,27 +21,31 @@ set(frontend-tools_HEADERS
 	auto-scene-switcher.hpp
 	output-timer.hpp
 	tool-helpers.hpp
-        obsremote.hpp
-	)
+	obsremote-config.hpp
+	obsremote-message-handler.hpp
+	obsremote-event-handler.hpp
+	obsremote.hpp)
 set(frontend-tools_SOURCES
 	${frontend-tools_SOURCES}
 	auto-scene-switcher.cpp
 	frontend-tools.c
 	output-timer.cpp
-        obsremote.cpp
-	)
+	obsremote-config.cpp
+	obsremote-message-handler.cpp
+	obsremote-event-handler.cpp
+	obsremote.cpp)
 set(frontend-tools_UI
 	${frontend-tools_UI}
 	forms/auto-scene-switcher.ui
 	forms/output-timer.ui
-        forms/obsremote.ui
+	forms/obsremote.ui
 	)
 
-if(WIN32)
+if (WIN32)
 	set(frontend-tools_PLATFORM_SOURCES
 		auto-scene-switcher-win.cpp)
 
-	if(BUILD_CAPTIONS)
+	if (BUILD_CAPTIONS)
 		set(frontend-tools_PLATFORM_SOURCES
 			${frontend-tools_PLATFORM_SOURCES}
 			captions.cpp
@@ -55,8 +59,8 @@ if(WIN32)
 			captions-mssapi-stream.hpp)
 		set(frontend-tools_PLATFORM_UI
 			forms/captions.ui)
-	endif()
-elseif(APPLE)
+	endif ()
+elseif (APPLE)
 	set(frontend-tools_PLATFORM_SOURCES
 		auto-scene-switcher-osx.mm)
 	set_source_files_properties(auto-scene-switcher-osx.mm
@@ -71,7 +75,7 @@ endif()
 
 qt5_wrap_ui(frontend-tools_UI_HEADERS
 	${frontend-tools_UI}
-        ${frontend-tools_PLATFORM_UI})
+	${frontend-tools_PLATFORM_UI})
 
 add_library(frontend-tools MODULE
 	${frontend-tools_HEADERS}
@@ -82,6 +86,8 @@ add_library(frontend-tools MODULE
 	)
 target_link_libraries(frontend-tools
 	${frontend-tools_PLATFORM_LIBS}
+	${OBS_LIBWEBSOCKETS_IMPORT}
+	${OBS_MBEDTLS_IMPORT}
 	obs-frontend-api
 	Qt5::Widgets
 	libobs)

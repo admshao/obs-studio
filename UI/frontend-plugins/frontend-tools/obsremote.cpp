@@ -1,40 +1,21 @@
-#include <obs-frontend-api.h>
-#include <obs-module.h>
-#include <obs.hpp>
-#include <util/util.hpp>
 #include <QAction>
-#include <QMainWindow>
 #include <QTimer>
-#include <QObject>
 #include "obsremote.hpp"
+#include "obsremote-message-handler.hpp"
+#include "obsremote-event-handler.hpp"
 
-#include <condition_variable>
-#include <chrono>
-#include <string>
 #include <thread>
 #include <mutex>
-
-#define do_log(type, format, ...) blog(type, "[OBSRemote] " format, \
-                ##__VA_ARGS__)
-
-#define error(format, ...) do_log(LOG_ERROR, format, ##__VA_ARGS__)
-#define info(format, ...) do_log(LOG_INFO, format, ##__VA_ARGS__)
+#include <libwebsockets.h>
 
 using namespace std;
-
-#define DEFAULT_PORT 4444
-#define DEFAULT_INTERVAL 1000
 
 struct OBSRemoteData
 {
 	thread th;
-	condition_variable cv;
 	mutex m;
 
-	bool enabled = false;
-	int interval = DEFAULT_INTERVAL;
-	int port = DEFAULT_PORT;
-	string password;
+	volatile bool enabled = false;
 
 	void Loop();
 
@@ -48,8 +29,81 @@ struct OBSRemoteData
 	}
 };
 
-static OBSRemoteData *obsremote = nullptr;
-static OBSRemote *obsr = nullptr;
+static OBSRemoteData *obsremote_data = nullptr;
+static OBSRemote *obsremote = nullptr;
+static OBSRemoteConfig *obsremote_config = nullptr;
+static OBSRemoteEventHandler *obsremote_event_handler = nullptr;
+
+int callback_obsapi(struct lws *wsi, enum lws_callback_reasons reason,
+                    void *user, void *in, size_t len)
+{
+	if (user == NULL)
+		return 0;
+
+	OBSAPIMessageHandler **userp = (OBSAPIMessageHandler **) user;
+	OBSAPIMessageHandler *messageHandler = *(userp);
+
+	switch (reason) {
+	case LWS_CALLBACK_ESTABLISHED: {
+		*userp = new OBSAPIMessageHandler();
+	}
+		break;
+	case LWS_CALLBACK_SERVER_WRITEABLE: {
+		if (!messageHandler->messagesToSend.empty()) {
+			obs_data_t *message = messageHandler->messagesToSend
+				.front();
+			messageHandler->messagesToSend.pop_front();
+
+			const char *messageText = obs_data_get_json(message);
+
+			if (messageText) {
+				size_t sendLength = strlen(messageText);
+
+				char *messageBuf =
+					(char *) malloc(LWS_PRE + sendLength);
+				memcpy(messageBuf + LWS_PRE, messageText,
+				       sendLength);
+
+				if (lws_write(
+					wsi, (unsigned char *) messageBuf +
+					     LWS_PRE, sendLength,
+					LWS_WRITE_TEXT) < 0) {
+					error("ERROR writing to socket");
+				}
+				free(messageBuf);
+			}
+			obs_data_release(message);
+
+			lws_callback_on_writable(wsi);
+		}
+	}
+		break;
+	case LWS_CALLBACK_RECEIVE: {
+		if (messageHandler->HandleReceivedMessage(in, len)) {
+			lws_callback_on_writable(wsi);
+		}
+	}
+		break;
+	case LWS_CALLBACK_CLOSED: {
+		delete (*userp);
+	}
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+static struct lws_protocols protocols[] = {
+	{
+		"obsapi",
+		callback_obsapi,
+		     sizeof(OBSAPIMessageHandler *),
+		        1024,
+	},
+	{NULL, NULL, 0, 0}
+};
 
 OBSRemote::OBSRemote(QWidget *parent) :
 	QDialog(parent),
@@ -60,175 +114,157 @@ OBSRemote::OBSRemote(QWidget *parent) :
 	ui->edit_port->setValidator(new QIntValidator(1000, 65535, this));
 
 	QObject::connect(ui->enabled, SIGNAL(clicked()), this,
-	                 SLOT(EnableClicked()));
+	                 SLOT(CheckStatus()));
 }
 
 void OBSRemoteData::Loop()
 {
-	info("Loop");
-	chrono::duration<long long, milli> duration =
-		chrono::milliseconds(interval);
+	struct lws_context *context;
+	struct lws_context_creation_info info;
 
-	for (;;)
-	{
-		unique_lock<mutex> lock(m);
-
-		cv.wait_for(lock, duration);
-		if (!obsremote->enabled)
-		{
-			break;
-		}
-
-		duration = chrono::milliseconds(interval);
-
-		info("Teste");
+	memset(&info, 0, sizeof info);
+	info.port = obsremote_config->port;
+	info.protocols = protocols;
+	context = lws_create_context(&info);
+	if (context == NULL) {
+		error("Failed to create lws context);");
+		return;
 	}
+	info("lws context created");
+
+	while (enabled) {
+		lws_service(context, 30);
+	}
+
+	lws_context_destroy(context);
+	info("lws context finished");
 }
 
 void OBSRemoteData::Start()
 {
-	info("Start");
-	if (!obsremote->th.joinable())
-	{
-		info("Joinable");
-		obsremote->th = thread([]()
-		                       { obsremote->Loop(); });
+	if (!th.joinable()) {
+		enabled = true;
+		th = thread([]()
+		            { obsremote_data->Loop(); });
 	}
 }
 
 void OBSRemoteData::Stop()
 {
-	info("Stop");
-	if (th.joinable())
-	{
-		info("Joinable");
-		{
-			lock_guard<mutex> lock(m);
-			enabled = false;
-		}
-		cv.notify_one();
+	if (th.joinable()) {
+		enabled = false;
 		th.join();
 	}
 }
 
-void OBSRemote::EnableClicked()
+void OBSRemote::CheckStatus()
 {
-	if (ui->enabled->isChecked())
-	{
-		obsremote->enabled = true;
-		obsremote->Start();
+	obsremote_data->m.lock();
+	if (ui->enabled->isChecked()) {
 		ui->edit_password->setDisabled(true);
 		ui->edit_port->setDisabled(true);
-	} else
-	{
-		obsremote->Stop();
+		obsremote_data->Start();
+	} else {
 		ui->edit_password->setDisabled(false);
 		ui->edit_port->setDisabled(false);
+		obsremote_data->Stop();
+	}
+	obsremote_data->m.unlock();
+}
+
+void OBSRemote::closeEvent(QCloseEvent *event)
+{
+	if (obsremote_config && obsremote_config->listenToChanges) {
+		obsremote_config->enabled = ui->enabled->isChecked();
+		obsremote_config->port = ui->edit_port->text().toInt();
+		if (obsremote_config->port == 0)
+			obsremote_config->port = DEFAULT_PORT;
+
+		obsremote_config->SetPassword(ui->edit_password->text()
+			                              .toStdString());
+		obsremote_config->listenToChanges = false;
 	}
 }
 
-static void SaveOBSRemote(obs_data_t *save_data, bool saving, void *)
+static void LoadSaveOBSRemote(obs_data_t *save_data, bool saving, void *)
 {
-	if (saving)
-	{
-		lock_guard<mutex> lock(obsremote->m);
+	//obs_data_set_obj(save_data, CONFIG_NAME, NULL);
+
+	if (saving) {
 		obs_data_t *obj = obs_data_create();
 
-		obs_data_set_bool(obj, "enabled",
-		                  obsr->ui->enabled->isChecked());
-		int port = obsr->ui->edit_port->text().toInt();
-		if (port > 0)
-		{
-			obs_data_set_int(obj, "port", port);
-		} else
-		{
-			obs_data_set_int(obj, "port", DEFAULT_PORT);
+		obs_data_set_bool(obj, PARAM_ENABLED,
+		                  obsremote_config->enabled);
+		obs_data_set_int(obj, PARAM_PORT, obsremote_config->port);
+		obs_data_set_string(obj, PARAM_PASSWORD,
+		                    obsremote_config->password.c_str());
+		obs_data_set_string(obj, PARAM_SECRET,
+		                    obsremote_config->secret.c_str());
+		obs_data_set_string(obj, PARAM_SALT,
+		                    obsremote_config->salt.c_str());
+
+		obs_data_set_obj(save_data, CONFIG_NAME, obj);
+		obs_data_release(obj);
+	} else {
+		obs_data_t *obj = obs_data_get_obj(save_data, CONFIG_NAME);
+
+		if (obj) {
+			obsremote_config->enabled = obs_data_get_bool(
+				obj, PARAM_ENABLED);
+			obsremote_config->port = (int) obs_data_get_int(
+				obj, PARAM_PORT);
+			obsremote_config->password = obs_data_get_string(
+				obj, PARAM_PASSWORD);
+			obsremote_config->secret = obs_data_get_string(
+				obj, PARAM_SECRET);
+			obsremote_config->salt = obs_data_get_string(
+				obj, PARAM_SALT);
+
+			obs_data_release(obj);
 		}
 
-		obs_data_set_string(obj, "password",
-		                    obsr->ui->edit_password->text()
-			                    .toStdString().c_str());
+		obsremote->ui->enabled->setChecked(obsremote_config->enabled);
+		obsremote->ui->edit_port->setText
+			(QString::number(obsremote_config->port));
+		obsremote->ui->edit_password->setText
+			(obsremote_config->password.c_str());
 
-		obs_data_set_obj(save_data, "obsremote", obj);
-		obs_data_release(obj);
-	} else
-	{
-		obsremote->Stop();
-
-		obsremote->m.lock();
-
-		obs_data_t *obj = obs_data_get_obj(save_data, "obsremote");
-
-		if (!obj)
-			obj = obs_data_create();
-
-		obs_data_set_default_int(obj, "port", DEFAULT_PORT);
-
-		obsremote->enabled = obs_data_get_bool(obj, "enabled");
-		obsr->ui->enabled->setChecked(obsremote->enabled);
-		obsr->EnableClicked();
-		obsremote->port = (int) obs_data_get_int(obj, "port");
-		obsr->ui->edit_port->setText(QString::number(obsremote->port));
-		obsremote->password = obs_data_get_string(obj, "password");
-		obsr->ui->edit_password->setText(obsremote->password.c_str());
-
-		obs_data_release(obj);
-		obsremote->m.unlock();
-
-		if (obsremote->enabled)
-			obsremote->Start();
+		obsremote->CheckStatus();
 	}
-}
-
-void OBSRemote::closeEvent(QCloseEvent *)
-{
-	info("Window Close");
-	obs_frontend_save();
 }
 
 extern "C" void EndOBSRemote()
 {
-	info("End");
-	delete obsremote;
-	obsremote = nullptr;
-	delete obsr;
-	obsr = nullptr;
-}
-
-static void OBSEvent(enum obs_frontend_event event, void *)
-{
-	info("Event");
-	if (event == OBS_FRONTEND_EVENT_EXIT)
-	{
-		info("Exit");
-		EndOBSRemote();
-	}
+	delete obsremote_event_handler;
+	obsremote_event_handler = nullptr;
+	delete obsremote_data;
+	obsremote_data = nullptr;
+	delete obsremote_config;
+	obsremote_config = nullptr;
 }
 
 extern "C" void InitOBSRemote()
 {
-
-	info("Init");
 	QAction *action = (QAction *) obs_frontend_add_tools_menu_qaction(
 		obs_module_text("OBSRemote"));
 
 	obs_frontend_push_ui_translation(obs_module_get_string);
-
 	QWidget *window = (QWidget *) obs_frontend_get_main_window();
 
-	obsremote = new OBSRemoteData;
-	obsr = new OBSRemote(window);
+	obsremote_config = OBSRemoteConfig::GetInstance();
+	obsremote = new OBSRemote(window);
+	obsremote_data = new OBSRemoteData;
+	obsremote_event_handler = new OBSRemoteEventHandler(obsremote);
 
 	auto cb = []()
 	{
-		info("OBSRemote Window Exec");
-		obsr->exec();
+		obsremote_config->listenToChanges = true;
+		obsremote->exec();
 	};
 
 	obs_frontend_pop_ui_translation();
 
-	obs_frontend_add_save_callback(SaveOBSRemote, nullptr);
-	obs_frontend_add_event_callback(OBSEvent, nullptr);
+	obs_frontend_add_save_callback(LoadSaveOBSRemote, nullptr);
 
 	action->connect(action, &QAction::triggered, cb);
 }
