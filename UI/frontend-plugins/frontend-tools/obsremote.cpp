@@ -6,7 +6,6 @@
 
 #include <thread>
 #include <libwebsockets.h>
-#include <private-libwebsockets.h>
 
 using namespace std;
 
@@ -61,39 +60,13 @@ sendData(lws *wsi, obs_data_t *message)
 	}
 }
 
-void
-sendUpdate(lws *wsi, obs_data_t *message)
-{
-	struct lws *wsiTemp;
-	const struct lws_context_per_thread *pt;
-	const char *messageText = obs_data_get_json(message);
-
-	if (messageText) {
-		size_t sendLength = strlen(messageText);
-
-		char *messageBuf = (char *) malloc(LWS_PRE + sendLength);
-		memcpy(messageBuf + LWS_PRE, messageText, sendLength);
-
-		for (int n = 0; n < wsi->context->count_threads; n++) {
-			pt = &wsi->context->pt[n];
-
-			for (unsigned int j = 0; j < pt->fds_count; j++) {
-				wsiTemp = wsi->context->
-					lws_lookup[pt->fds[j].fd];
-				if (wsiTemp)
-					writeData(wsiTemp, messageBuf,
-					          sendLength);
-			}
-		}
-		free(messageBuf);
-	}
-}
-
 int callback_obsapi(struct lws *wsi, enum lws_callback_reasons reason,
                     void *user, void *in, size_t len)
 {
 	OBSAPIMessageHandler **userp;
 	OBSAPIMessageHandler *messageHandler;
+	bool sendCallback = false;
+
 	if (user != NULL) {
 		userp = (OBSAPIMessageHandler **) user;
 		messageHandler = *(userp);
@@ -107,12 +80,9 @@ int callback_obsapi(struct lws *wsi, enum lws_callback_reasons reason,
 		if (!obsremote_event_handler->updatesToSend.empty()) {
 			obs_data_t *message = obsremote_event_handler->
 				updatesToSend.front();
-			obsremote_event_handler->updatesToSend.pop_front();
-			sendUpdate(wsi, message);
-			obs_data_release(message);
+			sendData(wsi, message);
 
-			lws_callback_on_writable(wsi);
-			break;
+			sendCallback = true;
 		}
 
 		if (!messageHandler->messagesToSend.empty()) {
@@ -122,9 +92,12 @@ int callback_obsapi(struct lws *wsi, enum lws_callback_reasons reason,
 			sendData(wsi, message);
 			obs_data_release(message);
 
-			lws_callback_on_writable(wsi);
+			sendCallback = true;
 
 		}
+
+		if (sendCallback)
+			lws_callback_on_writable(wsi);
 		break;
 	case LWS_CALLBACK_RECEIVE:
 		if (messageHandler->HandleReceivedMessage(in, len)) {
@@ -177,18 +150,19 @@ void OBSRemoteData::Loop()
 	}
 	info("lws context created");
 
-	while (enabled) {
-		if (!obsremote_event_handler->updatesToSend.empty())
+	do {
+		if (!obsremote_event_handler->updatesToSend.empty()) {
 			lws_callback_on_writable_all_protocol(context,
 			                                      protocols);
-		lws_service(context, 50);
-	}
-
-	// send all left updates before shutdown
-	while (!obsremote_event_handler->updatesToSend.empty()) {
-		lws_callback_on_writable_all_protocol(context, protocols);
-		lws_service(context, 50);
-	}
+			lws_service(context, 50);
+			obs_data_t *message = obsremote_event_handler->
+				updatesToSend.front();
+			obs_data_release(message);
+			obsremote_event_handler->updatesToSend.pop_front();
+		} else {
+			lws_service(context, 50);
+		}
+	} while (enabled || !obsremote_event_handler->updatesToSend.empty());
 
 	lws_context_destroy(context);
 	info("lws context finished");
@@ -241,9 +215,6 @@ void OBSRemote::closeEvent(QCloseEvent *event)
 static void
 LoadSaveOBSRemote(obs_data_t *save_data, bool saving, void *)
 {
-	//obs_data_set_obj(save_data, CONFIG_NAME, NULL);
-
-
 	if (saving) {
 		obs_data_t *obj = obs_data_create();
 
