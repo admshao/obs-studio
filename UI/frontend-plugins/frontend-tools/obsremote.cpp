@@ -73,8 +73,21 @@ int callback_obsapi(struct lws *wsi, enum lws_callback_reasons reason,
 	}
 
 	switch (reason) {
-	case LWS_CALLBACK_ESTABLISHED:
+	case LWS_CALLBACK_ESTABLISHED: {
+		int IP_SIZE = 50;
+		char client_name[IP_SIZE];
+		char client_ip[IP_SIZE];
+		lws_get_peer_addresses(wsi, lws_get_socket_fd(wsi),
+		                       client_name, IP_SIZE,
+		                       client_ip, IP_SIZE);
+
+		info("Established connection from %s (%s)", client_name,
+		     client_ip);
+
 		*userp = new OBSAPIMessageHandler();
+		(*userp)->ip = client_ip;
+		(*userp)->name = client_name;
+	}
 		break;
 	case LWS_CALLBACK_SERVER_WRITEABLE:
 		if (!obsremote_event_handler->updatesToSend.empty()) {
@@ -104,9 +117,11 @@ int callback_obsapi(struct lws *wsi, enum lws_callback_reasons reason,
 			lws_callback_on_writable(wsi);
 		}
 		break;
-	case LWS_CALLBACK_CLOSED:
+	case LWS_CALLBACK_CLOSED: {
+		info("Closed connection from %s (%s)", (*userp)->name.c_str(),
+		     (*userp)->ip.c_str());
 		delete (*userp);
-
+	}
 		break;
 	default:
 		break;

@@ -13,6 +13,9 @@ struct OBSAPIMessageHandler
 {
 	OBSAPIMessageHandler();
 
+	string ip;
+	string name;
+
 	bool authenticated;
 	map<string, obs_data_t *(*)(OBSAPIMessageHandler *, obs_data_t *)>
 		messageMap;
