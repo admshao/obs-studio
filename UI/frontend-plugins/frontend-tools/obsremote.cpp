@@ -163,7 +163,7 @@ void OBSRemoteData::Loop()
 		error("Failed to create lws context);");
 		return;
 	}
-	info("lws context created");
+	info("listening on port %d", info.port);
 
 	while (enabled || !obsremote_event_handler->updatesToSend.empty()) {
 		if (!obsremote_event_handler->updatesToSend.empty()) {
@@ -189,6 +189,7 @@ void OBSRemoteData::Start()
 		enabled = true;
 		th = thread([]()
 		            { obsremote_data->Loop(); });
+		obsremote_event_handler = new OBSRemoteEventHandler();
 	}
 }
 
@@ -197,6 +198,8 @@ void OBSRemoteData::Stop()
 	if (th.joinable()) {
 		enabled = false;
 		th.join();
+		delete obsremote_event_handler;
+		obsremote_event_handler = nullptr;
 	}
 }
 
@@ -211,6 +214,11 @@ void OBSRemote::CheckStatus()
 		ui->edit_port->setDisabled(false);
 		obsremote_data->Stop();
 	}
+}
+
+bool OBSRemote::isRunning()
+{
+	return obsremote_data->enabled;
 }
 
 void OBSRemote::closeEvent(QCloseEvent *event)
@@ -282,8 +290,6 @@ void EndOBSRemote()
 {
 	delete obsremote_data;
 	obsremote_data = nullptr;
-	delete obsremote_event_handler;
-	obsremote_event_handler = nullptr;
 	delete obsremote_config;
 	obsremote_config = nullptr;
 }
@@ -300,7 +306,6 @@ void InitOBSRemote()
 	obsremote_config = OBSRemoteConfig::GetInstance();
 	obsremote = new OBSRemote(window);
 	obsremote_data = new OBSRemoteData;
-	obsremote_event_handler = new OBSRemoteEventHandler();
 
 	auto cb = []()
 	{

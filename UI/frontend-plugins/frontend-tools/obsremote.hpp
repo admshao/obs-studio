@@ -20,10 +20,10 @@ Q_OBJECT
 
 public:
 	OBSRemote(QWidget *parent);
-
-	void closeEvent(QCloseEvent *event) override;
-
 	unique_ptr<Ui_OBSRemote> ui;
+	void closeEvent(QCloseEvent *event) override;
+	bool isRunning();
+
 public slots:
 
 	void CheckStatus();
