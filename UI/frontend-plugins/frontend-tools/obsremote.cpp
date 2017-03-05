@@ -150,7 +150,7 @@ void OBSRemoteData::Loop()
 	}
 	info("lws context created");
 
-	do {
+	while (enabled || !obsremote_event_handler->updatesToSend.empty()) {
 		if (!obsremote_event_handler->updatesToSend.empty()) {
 			lws_callback_on_writable_all_protocol(context,
 			                                      protocols);
@@ -162,7 +162,7 @@ void OBSRemoteData::Loop()
 		} else {
 			lws_service(context, 50);
 		}
-	} while (enabled || !obsremote_event_handler->updatesToSend.empty());
+	}
 
 	lws_context_destroy(context);
 	info("lws context finished");
