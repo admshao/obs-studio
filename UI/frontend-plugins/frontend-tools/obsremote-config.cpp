@@ -10,15 +10,15 @@ OBSRemoteConfig::OBSRemoteConfig()
 	mbedtls_ctr_drbg_set_prediction_resistance(&rng,
 	                                           MBEDTLS_CTR_DRBG_PR_ON);
 
-	challenge = getChallenge();
+	const char *tmp = getChallenge();
+	challenge = string(tmp);
+	bfree((void *) tmp);
 }
 
 OBSRemoteConfig::~OBSRemoteConfig()
 {
 	mbedtls_ctr_drbg_free(&rng);
 	mbedtls_entropy_free(&entropy);
-
-	_instance = nullptr;
 }
 
 const char *OBSRemoteConfig::getChallenge()
@@ -42,7 +42,7 @@ bool OBSRemoteConfig::UseAuth()
 
 void OBSRemoteConfig::SetPassword(string newpass)
 {
-	if (!password.compare(newpass))
+	if (password.compare(newpass) == 0)
 		return;
 
 	if (newpass.empty()) {
@@ -73,7 +73,6 @@ void OBSRemoteConfig::SetPassword(string newpass)
 		               0);
 
 		memset(saltPlusPass, 0, saltPlusPassSize);
-		bfree(saltPlusPass);
 
 		mbedtls_base64_encode(passHash64, passHash64Size,
 		                      &passHash64Size,
@@ -81,10 +80,13 @@ void OBSRemoteConfig::SetPassword(string newpass)
 		                      32);
 		passHash64[passHash64Size] = 0;
 
-		bfree(passHash);
+		salt = string(salt64);
+		secret = string((const char *) passHash64);
 
-		salt = salt64;
-		secret = (const char *) passHash64;
+		bfree(saltPlusPass);
+		bfree(passHash);
+		bfree((void *) salt64);
+		bfree(passHash64);
 	}
 }
 

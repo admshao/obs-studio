@@ -32,29 +32,23 @@ using namespace std;
 class OBSRemoteConfig
 {
 public:
-	const char *getChallenge();
-
-	bool UseAuth();
-
-	bool Auth(const char *response);
-
-	void SetPassword(string newpass);
-
-	static OBSRemoteConfig *GetInstance();
-
 	OBSRemoteConfig();
-
 	~OBSRemoteConfig();
 
-	string challenge = "";
-	string secret = "";
-	string salt = "";
-	string password = "";
+	const char *getChallenge();
+	bool UseAuth();
+	bool Auth(const char *response);
+	void SetPassword(string newpass);
+	static OBSRemoteConfig *GetInstance();
 
-	bool enabled = false;
-	int port = DEFAULT_PORT;
+	string challenge;
+	string secret;
+	string salt;
+	string password;
 
 	bool listenToChanges = false;
+	bool enabled = false;
+	int port = DEFAULT_PORT;
 
 private:
 	static OBSRemoteConfig *_instance;

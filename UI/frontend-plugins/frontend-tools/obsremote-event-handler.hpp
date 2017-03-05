@@ -3,14 +3,24 @@
 #include "obsremote-config.hpp"
 #include "obsremote.hpp"
 
+#include <deque>
+
+using namespace std;
+
 class OBSRemoteEventHandler
 {
 public:
-	OBSRemoteEventHandler(OBSRemote *obsr);
+	OBSRemoteEventHandler();
+	~OBSRemoteEventHandler();
+
+	deque<obs_data_t *> updatesToSend;
 
 	static void
-	EventHandler(enum obs_frontend_event event, void *private_data);
+	EventHandler(enum obs_frontend_event event, void *me);
 
 private:
-	OBSRemote *obsr;
+	void sendUpdate(const char *type, obs_data_t *msg);
+
+	void onSceneChange();
+	void onExit();
 };

@@ -1,7 +1,7 @@
 #include <obs-frontend-api.h>
 #include "obsremote-message-handler.hpp"
 
-obs_data_t *SendOkResponse(obs_data_t *ret)
+obs_data_t *SendOkResponse(obs_data_t *ret = NULL)
 {
 	if (!ret)
 		ret = obs_data_create();
@@ -129,7 +129,7 @@ OBSAPIMessageHandler::HandleAuthenticate(OBSAPIMessageHandler *handler,
 
 	if (OBSRemoteConfig::GetInstance()->Auth(auth)) {
 		handler->authenticated = true;
-		return SendOkResponse(NULL);
+		return SendOkResponse();
 	} else {
 		return GetErrorResponse("Authentication Failed.");
 	}
