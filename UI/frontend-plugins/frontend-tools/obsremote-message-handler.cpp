@@ -178,8 +178,8 @@ obs_data_t *
 OBSAPIMessageHandler::HandleSetCurrentScene(OBSAPIMessageHandler *handler,
                                             obs_data_t *message)
 {
+	obs_data_t *ret = NULL;
 	const char *name = obs_data_get_string(message, "scene-name");
-	obs_data_t *ret;
 	obs_source_t *source = obs_get_source_by_name(name);
 	if (source) {
 		obs_frontend_set_current_scene(source);
@@ -279,16 +279,6 @@ OBSAPIMessageHandler::OBSAPIMessageHandler()
 		OBSAPIMessageHandler::HandleGetSceneNames;
 	messageMap[REQ_SET_CURRENT_SCENE] =
 		OBSAPIMessageHandler::HandleSetCurrentScene;
-	/*messageMap[REQ_SET_SOURCES_ORDER] =
-		 OBSAPIMessageHandler::HandleSetSourcesOrder;
-	messageMap[REQ_SET_SOURCE_RENDER] =                 OBSAPIMessageHandler::HandleSetSourceRender;
-	messageMap[REQ_SET_SCENEITEM_POSITION_AND_SIZE] =   OBSAPIMessageHandler::HandleSetSceneItemPositionAndSize;
-	messageMap[REQ_GET_STREAMING_STATUS] =              OBSAPIMessageHandler::HandleGetStreamingStatus;
-	messageMap[REQ_STARTSTOP_STREAMING] =               OBSAPIMessageHandler::HandleStartStopStreaming;
-	messageMap[REQ_TOGGLE_MUTE] =                       OBSAPIMessageHandler::HandleToggleMute;
-	messageMap[REQ_GET_VOLUMES] =                       OBSAPIMessageHandler::HandleGetVolumes;
-	messageMap[REQ_SET_VOLUME] =
-	 OBSAPIMessageHandler::HandleSetVolume;*/
 
 	messagesNotRequiringAuth.insert(REQ_GET_VERSION);
 	messagesNotRequiringAuth.insert(REQ_GET_AUTH_REQUIRED);

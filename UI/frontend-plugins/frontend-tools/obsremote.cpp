@@ -74,7 +74,7 @@ int callback_obsapi(struct lws *wsi, enum lws_callback_reasons reason,
 
 	switch (reason) {
 	case LWS_CALLBACK_ESTABLISHED: {
-		int IP_SIZE = 50;
+		const int IP_SIZE = 50;
 		char client_name[IP_SIZE];
 		char client_ip[IP_SIZE];
 		lws_get_peer_addresses(wsi, lws_get_socket_fd(wsi),
