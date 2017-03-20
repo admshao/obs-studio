@@ -21,6 +21,10 @@ public:
 private:
 	void sendUpdate(const char *type, obs_data_t *msg);
 
+	void onRecordingStarting();
+	void onRecordingStarted();
+	void onRecordingStopping();
+	void onRecordingStopped();
 	void onSceneChange();
 	void onExit();
 };

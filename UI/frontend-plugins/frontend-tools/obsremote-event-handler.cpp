@@ -16,6 +16,18 @@ void OBSRemoteEventHandler::EventHandler(enum obs_frontend_event event,
 	OBSRemoteEventHandler *handler = (OBSRemoteEventHandler *) me;
 
 	switch (event) {
+	case OBS_FRONTEND_EVENT_RECORDING_STARTING:
+		handler->onRecordingStarting();
+		break;
+	case OBS_FRONTEND_EVENT_RECORDING_STARTED:
+		handler->onRecordingStarted();
+		break;
+	case OBS_FRONTEND_EVENT_RECORDING_STOPPING:
+		handler->onRecordingStopping();
+		break;
+	case OBS_FRONTEND_EVENT_RECORDING_STOPPED:
+		handler->onRecordingStopped();
+		break;
 	case OBS_FRONTEND_EVENT_SCENE_CHANGED:
 		handler->onSceneChange();
 		break;
@@ -35,6 +47,26 @@ void OBSRemoteEventHandler::sendUpdate(const char *type, obs_data_t *msg = NULL)
 	obs_data_set_string(msg, "update-type", type);
 
 	updatesToSend.push_back(msg);
+}
+
+void OBSRemoteEventHandler::onRecordingStarting()
+{
+	sendUpdate("RecordingStarting");
+}
+
+void OBSRemoteEventHandler::onRecordingStarted()
+{
+	sendUpdate("RecordingStarted");
+}
+
+void OBSRemoteEventHandler::onRecordingStopping()
+{
+	sendUpdate("RecordingStopping");
+}
+
+void OBSRemoteEventHandler::onRecordingStopped()
+{
+	sendUpdate("RecordingStopped");
 }
 
 void OBSRemoteEventHandler::onSceneChange()
