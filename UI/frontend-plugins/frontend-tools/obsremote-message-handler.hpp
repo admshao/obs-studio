@@ -41,6 +41,53 @@ struct OBSAPIMessageHandler
 	                      obs_data_t *message);
 	static obs_data_t *
 	HandleGetSceneNames(OBSAPIMessageHandler *handler, obs_data_t *message);
+
+	static obs_data_t *
+	HandleStartRecording(OBSAPIMessageHandler *handler,
+	                     obs_data_t *message);
+
+	static obs_data_t *
+	HandleStopRecording(OBSAPIMessageHandler *handler, obs_data_t *message);
+
+	static obs_data_t *
+	HandleRecordingActive(OBSAPIMessageHandler *handler,
+	                      obs_data_t *message);
+
+	static obs_data_t *
+	HandleStartStreaming(OBSAPIMessageHandler *handler,
+	                     obs_data_t *message);
+
+	static obs_data_t *
+	HandleStopStreaming(OBSAPIMessageHandler *handler, obs_data_t *message);
+
+	static obs_data_t *
+	HandleStreamingActive(OBSAPIMessageHandler *handler,
+	                      obs_data_t *message);
+
+	static obs_data_t *
+	HandleListSceneCollections(OBSAPIMessageHandler *handler,
+	                           obs_data_t *message);
+
+	static obs_data_t *
+	HandleSetCurrentSceneCollection(OBSAPIMessageHandler *handler,
+	                                obs_data_t *message);
+
+	static obs_data_t *
+	HandleGetCurrentSceneCollection(OBSAPIMessageHandler *handler,
+	                                obs_data_t *message);
+
+	static obs_data_t *
+	HandleListProfiles(OBSAPIMessageHandler *handler,
+	                   obs_data_t *message);
+
+	static obs_data_t *
+	HandleSetCurrentProfile(OBSAPIMessageHandler *handler,
+	                        obs_data_t *message);
+
+	static obs_data_t *
+	HandleGetCurrentProfile(OBSAPIMessageHandler *handler,
+	                        obs_data_t *message);
+
 	bool HandleReceivedMessage(void *in, size_t len);
 
 };

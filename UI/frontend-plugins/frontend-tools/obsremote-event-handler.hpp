@@ -25,6 +25,14 @@ private:
 	void onRecordingStarted();
 	void onRecordingStopping();
 	void onRecordingStopped();
+	void onStreamingStarting();
+	void onStreamingStarted();
+	void onStreamingStopping();
+	void onStreamingStopped();
+	void onProfileChanged();
+	void onProfileListChanged();
+	void onSceneCollectionChanged();
+	void onSceneCollectionListChanged();
 	void onSceneChange();
 	void onExit();
 };

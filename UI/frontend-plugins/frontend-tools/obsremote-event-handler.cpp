@@ -28,6 +28,30 @@ void OBSRemoteEventHandler::EventHandler(enum obs_frontend_event event,
 	case OBS_FRONTEND_EVENT_RECORDING_STOPPED:
 		handler->onRecordingStopped();
 		break;
+	case OBS_FRONTEND_EVENT_STREAMING_STARTING:
+		handler->onStreamingStarting();
+		break;
+	case OBS_FRONTEND_EVENT_STREAMING_STARTED:
+		handler->onStreamingStarted();
+		break;
+	case OBS_FRONTEND_EVENT_STREAMING_STOPPING:
+		handler->onStreamingStopping();
+		break;
+	case OBS_FRONTEND_EVENT_STREAMING_STOPPED:
+		handler->onStreamingStopped();
+		break;
+	case OBS_FRONTEND_EVENT_PROFILE_CHANGED:
+		handler->onProfileChanged();
+		break;
+	case OBS_FRONTEND_EVENT_PROFILE_LIST_CHANGED:
+		handler->onProfileListChanged();
+		break;
+	case OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGED:
+		handler->onSceneCollectionChanged();
+		break;
+	case OBS_FRONTEND_EVENT_SCENE_COLLECTION_LIST_CHANGED:
+		handler->onSceneCollectionListChanged();
+		break;
 	case OBS_FRONTEND_EVENT_SCENE_CHANGED:
 		handler->onSceneChange();
 		break;
@@ -67,6 +91,46 @@ void OBSRemoteEventHandler::onRecordingStopping()
 void OBSRemoteEventHandler::onRecordingStopped()
 {
 	sendUpdate("RecordingStopped");
+}
+
+void OBSRemoteEventHandler::onStreamingStarting()
+{
+	sendUpdate("StreamingStarting");
+}
+
+void OBSRemoteEventHandler::onStreamingStarted()
+{
+	sendUpdate("StreamingStarted");
+}
+
+void OBSRemoteEventHandler::onStreamingStopping()
+{
+	sendUpdate("StreamingStopping");
+}
+
+void OBSRemoteEventHandler::onStreamingStopped()
+{
+	sendUpdate("StreamingStopped");
+}
+
+void OBSRemoteEventHandler::onProfileChanged()
+{
+	sendUpdate("ProfileChanged");
+}
+
+void OBSRemoteEventHandler::onProfileListChanged()
+{
+	sendUpdate("ProfileListChanged");
+}
+
+void OBSRemoteEventHandler::onSceneCollectionChanged()
+{
+	sendUpdate("SceneCollectionChanged");
+}
+
+void OBSRemoteEventHandler::onSceneCollectionListChanged()
+{
+	sendUpdate("SceneCollectionListChanged");
 }
 
 void OBSRemoteEventHandler::onSceneChange()

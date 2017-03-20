@@ -22,10 +22,26 @@
 #define REQ_GET_VERSION "GetVersion"
 #define REQ_GET_AUTH_REQUIRED "GetAuthRequired"
 #define REQ_AUTHENTICATE "Authenticate"
-#define REQ_GET_CURRENT_SCENE "GetCurrentScene"
+
 #define REQ_GET_SCENE_LIST "GetSceneList"
 #define REQ_GET_SCENE_NAMES "GetSceneNames"
+#define REQ_GET_CURRENT_SCENE "GetCurrentScene"
 #define REQ_SET_CURRENT_SCENE "SetCurrentScene"
+
+#define REQ_START_RECORDING "StartRecording"
+#define REQ_STOP_RECORDING "StopRecording"
+#define REQ_RECORDING_ACTIVE "RecordingActive"
+#define REQ_START_STREAMING "StartStreaming"
+#define REQ_STOP_STREAMING "StopStreaming"
+#define REQ_STREAMING_ACTIVE "StreamingActive"
+
+#define REQ_LIST_PROFILES "ListProfiles"
+#define REQ_SET_CURRENT_PROFILE "SetCurrentProfile"
+#define REQ_GET_CURRENT_PROFILE "GetCurrentProfile"
+
+#define REQ_LIST_SCENE_COLLECTIONS "ListSceneCollections"
+#define REQ_SET_CURRENT_SCENE_COLLECTION "SetCurrentSceneCollection"
+#define REQ_GET_CURRENT_SCENE_COLLECTION "GetCurrentSceneCollection"
 
 using namespace std;
 
