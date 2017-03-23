@@ -5,6 +5,7 @@
 #include <map>
 #include <set>
 
+#include "obsremote-functions.hpp"
 #include "obsremote-config.hpp"
 
 using namespace std;
@@ -87,6 +88,22 @@ struct OBSAPIMessageHandler
 	static obs_data_t *
 	HandleGetCurrentProfile(OBSAPIMessageHandler *handler,
 	                        obs_data_t *message);
+
+	static obs_data_t *
+	HandleGetGlobalAudioList(OBSAPIMessageHandler *handler,
+	                         obs_data_t *message);
+
+	static obs_data_t *
+	HandleSetVolume(OBSAPIMessageHandler *handler,
+	                obs_data_t *message);
+
+	static obs_data_t *
+	HandleGetVolume(OBSAPIMessageHandler *handler,
+	                obs_data_t *message);
+
+	static obs_data_t *
+	HandleSetMuted(OBSAPIMessageHandler *handler,
+	               obs_data_t *message);
 
 	bool HandleReceivedMessage(void *in, size_t len);
 

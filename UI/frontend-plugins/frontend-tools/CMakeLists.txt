@@ -24,7 +24,9 @@ set(frontend-tools_HEADERS
 	obsremote-config.hpp
 	obsremote-message-handler.hpp
 	obsremote-event-handler.hpp
-	obsremote.hpp)
+	obsremote.hpp
+	obsremote-functions.hpp
+	)
 set(frontend-tools_SOURCES
 	${frontend-tools_SOURCES}
 	auto-scene-switcher.cpp
@@ -33,7 +35,9 @@ set(frontend-tools_SOURCES
 	obsremote-config.cpp
 	obsremote-message-handler.cpp
 	obsremote-event-handler.cpp
-	obsremote.cpp)
+	obsremote.cpp
+	obsremote-functions.cpp
+	)
 set(frontend-tools_UI
 	${frontend-tools_UI}
 	forms/auto-scene-switcher.ui

@@ -43,6 +43,11 @@
 #define REQ_SET_CURRENT_SCENE_COLLECTION "SetCurrentSceneCollection"
 #define REQ_GET_CURRENT_SCENE_COLLECTION "GetCurrentSceneCollection"
 
+#define REQ_GET_GLOBAL_AUDIO_LIST "GetGlobalAudioList"
+#define REQ_SET_VOLUME "SetVolume"
+#define REQ_GET_VOLUME "GetVolume"
+#define REQ_SET_MUTED "SetMuted"
+
 using namespace std;
 
 class OBSRemoteConfig

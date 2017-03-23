@@ -3082,6 +3082,10 @@ void OBSBasicSettings::SaveAudioSettings()
 	UpdateAudioDevice(true, ui->auxAudioDevice3,
 			"Basic.AuxDevice3", 5);
 	main->SaveProject();
+
+	if (main->api)
+		main->api->on_event(
+			OBS_FRONTEND_EVENT_GLOBAL_AUDIO_SOURCES_CHANGED);
 }
 
 void OBSBasicSettings::SaveHotkeySettings()

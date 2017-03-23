@@ -1,97 +1,4 @@
-#include <obs-frontend-api.h>
 #include "obsremote-message-handler.hpp"
-
-obs_data_t *SendOkResponse(obs_data_t *ret = NULL)
-{
-	if (!ret)
-		ret = obs_data_create();
-	obs_data_set_string(ret, "status", "ok");
-	return ret;
-}
-
-obs_data_t *GetErrorResponse(const char *error)
-{
-	obs_data_t *ret = obs_data_create();
-	obs_data_set_string(ret, "status", "error");
-	obs_data_set_string(ret, "error", error);
-	return ret;
-}
-
-static void
-obsremote_get_source_filter(obs_source_t *, obs_source_t *filter, void *param)
-{
-	obs_data_array_t *filters = (obs_data_array_t *) param;
-	obs_data_t *filter_data = obs_data_create();
-
-	obs_data_set_string(filter_data, "name", obs_source_get_name(filter));
-	obs_data_set_int(filter_data, "type", obs_source_get_type(filter));
-	obs_data_array_push_back(filters, filter_data);
-
-	obs_data_release(filter_data);
-}
-
-static obs_data_array_t *obsremote_get_filters(obs_source_t *source)
-{
-	if (!source)
-		return NULL;
-
-	obs_data_array_t *filters = obs_data_array_create();
-	obs_source_enum_filters(source, obsremote_get_source_filter,
-	                        (void *) filters);
-
-	return filters;
-}
-
-static bool
-obsremote_get_scene_item(obs_scene_t *, obs_sceneitem_t *item, void *param)
-{
-	obs_data_array_t *sources = (obs_data_array_t *) param;
-	obs_source_t *source = obs_sceneitem_get_source(item);
-
-	obs_data_t *source_data = obs_data_create();
-	obs_data_set_string(source_data, "name", obs_source_get_name(source));
-	obs_data_set_int(source_data, "type", obs_source_get_type(source));
-	obs_data_array_t *filters = obsremote_get_filters(source);
-	obs_data_set_array(source_data, "filters", filters);
-	obs_data_array_push_back(sources, source_data);
-
-	obs_data_array_release(filters);
-	obs_data_release(source_data);
-	return true;
-}
-
-static obs_data_array_t *obsremote_get_sources(obs_source_t *source)
-{
-	if (!source)
-		return NULL;
-
-	obs_scene_t *scene = obs_scene_from_source(source);
-	if (!scene)
-		return NULL;
-
-	obs_data_array_t *sources = obs_data_array_create();
-	obs_scene_enum_items(scene, obsremote_get_scene_item, (void *)
-		sources);
-
-	return sources;
-}
-
-static obs_data_t *obsremote_get_scene_data(obs_source_t *source)
-{
-	obs_data_t *data = obs_data_create();
-	if (!source)
-		return data;
-
-	obs_data_set_string(data, "name", obs_source_get_name(source));
-	obs_data_array_t *sources = obsremote_get_sources(source);
-	obs_data_set_array(data, "sources", sources);
-	obs_data_array_release(sources);
-	obs_data_array_t *filters = obsremote_get_filters(source);
-	obs_data_set_array(data, "filters", filters);
-	obs_data_array_release(filters);
-
-	return data;
-}
 
 obs_data_t *
 OBSAPIMessageHandler::HandleGetVersion(OBSAPIMessageHandler *handler,
@@ -308,7 +215,7 @@ obs_data_t *OBSAPIMessageHandler::HandleGetCurrentSceneCollection(
 	OBSAPIMessageHandler *handler, obs_data_t *message)
 {
 	obs_data_t *ret = obs_data_create();
-	char * name = obs_frontend_get_current_scene_collection();
+	char *name = obs_frontend_get_current_scene_collection();
 	obs_data_set_string(ret, "scene-collection-name", name);
 	bfree(name);
 	return ret;
@@ -346,7 +253,7 @@ OBSAPIMessageHandler::HandleSetCurrentProfile(OBSAPIMessageHandler *handler,
 	const char *name = obs_data_get_string(message, "profile-name");
 	if (name) {
 		obs_frontend_set_current_profile(name);
-		ret = SendOkResponse(ret);
+		ret = SendOkResponse();
 	} else {
 		ret = GetErrorResponse("Invalid Profile Name");
 	}
@@ -358,9 +265,102 @@ OBSAPIMessageHandler::HandleGetCurrentProfile(OBSAPIMessageHandler *handler,
                                               obs_data_t *message)
 {
 	obs_data_t *ret = obs_data_create();
-	char * name = obs_frontend_get_current_profile();
+	char *name = obs_frontend_get_current_profile();
 	obs_data_set_string(ret, "profile-name", name);
 	bfree(name);
+	return ret;
+}
+
+obs_data_t *
+OBSAPIMessageHandler::HandleGetGlobalAudioList(OBSAPIMessageHandler *handler,
+                                               obs_data_t *message)
+{
+	obs_data_t *ret = obs_data_create();
+	obs_data_array_t *source_array = obs_data_array_create();
+
+	struct obs_frontend_source_list audio_sources = {};
+	obs_frontend_get_global_audio_sources(&audio_sources);
+
+	for (size_t i = 0; i < audio_sources.sources.num; i++) {
+		obs_source_t *source = audio_sources.sources.array[i];
+		obs_data_t *source_data = obs_data_create();
+		obs_data_set_string(source_data, "name",
+		                    obs_source_get_name(source));
+		obs_data_set_int(source_data, "type",
+		                 obs_source_get_type(source));
+		obs_data_set_bool(source_data, "active",
+		                  obs_source_active(source));
+		obs_data_set_bool(source_data, "audio", true);
+		obs_data_set_double(source_data, "volume",
+		                    obs_source_get_volume(source));
+		obs_data_array_t *filters = obsremote_get_filters(
+			source);
+		obs_data_set_array(source_data, "filters", filters);
+		obs_data_array_push_back(source_array, source_data);
+		obs_data_array_release(filters);
+		obs_data_release(source_data);
+	}
+	obs_data_set_array(ret, "sources", source_array);
+	obs_data_array_release(source_array);
+	obs_frontend_source_list_free(&audio_sources);
+	return ret;
+}
+
+obs_data_t *
+OBSAPIMessageHandler::HandleSetVolume(OBSAPIMessageHandler *handler,
+                                      obs_data_t *message)
+{
+	obs_data_t *ret = NULL;
+	const char *source_name = obs_data_get_string(message, "source");
+	float volume = obs_data_get_double(message, "volume");
+
+	if (source_name && volume >= 0 && volume <= 1) {
+		obs_source_t *source = obs_get_source_by_name(source_name);
+		obs_source_set_volume(source, volume);
+		obs_source_release(source);
+		ret = SendOkResponse();
+	} else {
+		ret = GetErrorResponse("Invalid Source/Volume data");
+	}
+
+	return ret;
+}
+
+obs_data_t *
+OBSAPIMessageHandler::HandleGetVolume(OBSAPIMessageHandler *handler,
+                                      obs_data_t *message)
+{
+	obs_data_t *ret = NULL;
+	const char *source_name = obs_data_get_string(message, "source");
+	if (source_name) {
+		obs_source_t *source = obs_get_source_by_name(source_name);
+		ret = obs_data_create();
+		obs_data_set_double(ret, "volume",
+		                    obs_source_get_volume(source));
+		obs_source_release(source);
+		ret = SendOkResponse(ret);
+	} else {
+		ret = GetErrorResponse("Invalid Source");
+	}
+	return ret;
+}
+
+obs_data_t *
+OBSAPIMessageHandler::HandleSetMuted(OBSAPIMessageHandler *handler,
+                                     obs_data_t *message)
+{
+	obs_data_t *ret = NULL;
+	const char *source_name = obs_data_get_string(message, "source");
+	bool muted = obs_data_get_bool(message, "muted");
+	if (source_name) {
+		obs_source_t *source = obs_get_source_by_name(source_name);
+		obs_source_set_muted(source, muted);
+		obs_source_release(source);
+		ret = SendOkResponse();
+	} else {
+		ret = GetErrorResponse("Invalid source name");
+	}
+
 	return ret;
 }
 
@@ -456,6 +456,12 @@ OBSAPIMessageHandler::OBSAPIMessageHandler()
 		OBSAPIMessageHandler::HandleSetCurrentSceneCollection;
 	messageMap[REQ_GET_CURRENT_SCENE_COLLECTION] =
 		OBSAPIMessageHandler::HandleGetCurrentSceneCollection;
+
+	messageMap[REQ_GET_GLOBAL_AUDIO_LIST] =
+		OBSAPIMessageHandler::HandleGetGlobalAudioList;
+	messageMap[REQ_SET_VOLUME] = OBSAPIMessageHandler::HandleSetVolume;
+	messageMap[REQ_GET_VOLUME] = OBSAPIMessageHandler::HandleGetVolume;
+	messageMap[REQ_SET_MUTED] = OBSAPIMessageHandler::HandleSetMuted;
 
 	messagesNotRequiringAuth.insert(REQ_GET_VERSION);
 	messagesNotRequiringAuth.insert(REQ_GET_AUTH_REQUIRED);
