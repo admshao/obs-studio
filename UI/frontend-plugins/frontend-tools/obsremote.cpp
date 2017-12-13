@@ -155,7 +155,7 @@ OBSRemote::OBSRemote(QWidget *parent) :
 
 void OBSRemoteData::Loop()
 {
-	memset(&info, 0, sizeof info);
+	memset(&info, 0, sizeof(info));
 	info.port = obsremote_config->port;
 	info.protocols = protocols;
 	context = lws_create_context(&info);
