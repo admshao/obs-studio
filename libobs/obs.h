@@ -145,6 +145,13 @@ struct obs_transform_info {
 	struct vec2          bounds;
 };
 
+struct obs_sceneitem_crop {
+	int left;
+	int top;
+	int right;
+	int bottom;
+};
+
 /**
  * Video initialization structure
  */
@@ -1346,13 +1353,6 @@ EXPORT void obs_sceneitem_get_box_transform(const obs_sceneitem_t *item,
 
 EXPORT bool obs_sceneitem_visible(const obs_sceneitem_t *item);
 EXPORT bool obs_sceneitem_set_visible(obs_sceneitem_t *item, bool visible);
-
-struct obs_sceneitem_crop {
-	int left;
-	int top;
-	int right;
-	int bottom;
-};
 
 EXPORT void obs_sceneitem_set_crop(obs_sceneitem_t *item,
 		const struct obs_sceneitem_crop *crop);

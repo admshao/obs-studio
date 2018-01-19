@@ -44,12 +44,8 @@ struct obs_scene_item {
 	bool                  locked;
 
 	gs_texrender_t        *item_render;
+	struct obs_transform_info transform;
 	struct obs_sceneitem_crop crop;
-
-	struct vec2           pos;
-	struct vec2           scale;
-	float                 rot;
-	uint32_t              align;
 
 	/* last width/height of the source, this is used to check whether
 	 * the transform needs updating */
@@ -61,10 +57,6 @@ struct obs_scene_item {
 
 	struct matrix4        box_transform;
 	struct matrix4        draw_transform;
-
-	enum obs_bounds_type  bounds_type;
-	uint32_t              bounds_align;
-	struct vec2           bounds;
 
 	obs_hotkey_pair_id    toggle_visibility;
 

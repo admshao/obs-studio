@@ -253,47 +253,48 @@ static void calculate_bounds_data(struct obs_scene_item *item,
 	float    width         = (float)(*cx) * fabsf(scale->x);
 	float    height        = (float)(*cy) * fabsf(scale->y);
 	float    item_aspect   = width / height;
-	float    bounds_aspect = item->bounds.x / item->bounds.y;
-	uint32_t bounds_type   = item->bounds_type;
+	float    bounds_aspect = item->transform.bounds.x /
+			item->transform.bounds.y;
+	uint32_t bounds_type   = item->transform.bounds_type;
 	float    width_diff, height_diff;
 
-	if (item->bounds_type == OBS_BOUNDS_MAX_ONLY)
-		if (width > item->bounds.x || height > item->bounds.y)
+	if (item->transform.bounds_type == OBS_BOUNDS_MAX_ONLY)
+		if (width > item->transform.bounds.x ||
+				height > item->transform.bounds.y)
 			bounds_type = OBS_BOUNDS_SCALE_INNER;
 
 	if (bounds_type == OBS_BOUNDS_SCALE_INNER ||
-	    bounds_type == OBS_BOUNDS_SCALE_OUTER) {
+			bounds_type == OBS_BOUNDS_SCALE_OUTER) {
 		bool  use_width = (bounds_aspect < item_aspect);
 		float mul;
 
-		if (item->bounds_type == OBS_BOUNDS_SCALE_OUTER)
+		if (item->transform.bounds_type == OBS_BOUNDS_SCALE_OUTER)
 			use_width = !use_width;
 
-		mul = use_width ?
-			item->bounds.x / width :
-			item->bounds.y / height;
+		mul = use_width ? item->transform.bounds.x / width :
+				item->transform.bounds.y / height;
 
 		vec2_mulf(scale, scale, mul);
 
 	} else if (bounds_type == OBS_BOUNDS_SCALE_TO_WIDTH) {
-		vec2_mulf(scale, scale, item->bounds.x / width);
+		vec2_mulf(scale, scale, item->transform.bounds.x / width);
 
 	} else if (bounds_type == OBS_BOUNDS_SCALE_TO_HEIGHT) {
-		vec2_mulf(scale, scale, item->bounds.y / height);
+		vec2_mulf(scale, scale, item->transform.bounds.y / height);
 
 	} else if (bounds_type == OBS_BOUNDS_STRETCH) {
-		scale->x = item->bounds.x / (float)(*cx);
-		scale->y = item->bounds.y / (float)(*cy);
+		scale->x = item->transform.bounds.x / (float)(*cx);
+		scale->y = item->transform.bounds.y / (float)(*cy);
 	}
 
 	width       = (float)(*cx) * scale->x;
 	height      = (float)(*cy) * scale->y;
-	width_diff  = item->bounds.x - width;
-	height_diff = item->bounds.y - height;
-	*cx         = (uint32_t)item->bounds.x;
-	*cy         = (uint32_t)item->bounds.y;
+	width_diff  = item->transform.bounds.x - width;
+	height_diff = item->transform.bounds.y - height;
+	*cx         = (uint32_t)item->transform.bounds.x;
+	*cy         = (uint32_t)item->transform.bounds.y;
 
-	add_alignment(origin, item->bounds_align,
+	add_alignment(origin, item->transform.bounds_alignment,
 			(int)-width_diff, (int)-height_diff);
 }
 
@@ -319,7 +320,7 @@ static void update_item_transform(struct obs_scene_item *item)
 	uint32_t        cy            = calc_cy(item, height);
 	struct vec2     base_origin;
 	struct vec2     origin;
-	struct vec2     scale         = item->scale;
+	struct vec2     scale         = item->transform.scale;
 	struct calldata params;
 	uint8_t         stack[128];
 
@@ -334,14 +335,14 @@ static void update_item_transform(struct obs_scene_item *item)
 
 	/* ----------------------- */
 
-	if (item->bounds_type != OBS_BOUNDS_NONE) {
+	if (item->transform.bounds_type != OBS_BOUNDS_NONE) {
 		calculate_bounds_data(item, &origin, &scale, &cx, &cy);
 	} else {
 		cx = (uint32_t)((float)cx * scale.x);
 		cy = (uint32_t)((float)cy * scale.y);
 	}
 
-	add_alignment(&origin, item->align, (int)cx, (int)cy);
+	add_alignment(&origin, item->transform.alignment, (int)cx, (int)cy);
 
 	matrix4_identity(&item->draw_transform);
 	matrix4_scale3f(&item->draw_transform, &item->draw_transform,
@@ -349,22 +350,23 @@ static void update_item_transform(struct obs_scene_item *item)
 	matrix4_translate3f(&item->draw_transform, &item->draw_transform,
 			-origin.x, -origin.y, 0.0f);
 	matrix4_rotate_aa4f(&item->draw_transform, &item->draw_transform,
-			0.0f, 0.0f, 1.0f, RAD(item->rot));
+			0.0f, 0.0f, 1.0f, RAD(item->transform.rot));
 	matrix4_translate3f(&item->draw_transform, &item->draw_transform,
-			item->pos.x, item->pos.y, 0.0f);
+			item->transform.pos.x, item->transform.pos.y, 0.0f);
 
 	item->output_scale = scale;
 
 	/* ----------------------- */
 
-	if (item->bounds_type != OBS_BOUNDS_NONE) {
-		vec2_copy(&scale, &item->bounds);
+	if (item->transform.bounds_type != OBS_BOUNDS_NONE) {
+		vec2_copy(&scale, &item->transform.bounds);
 	} else {
-		scale.x = (float)width  * item->scale.x;
-		scale.y = (float)height * item->scale.y;
+		scale.x = (float)width  * item->transform.scale.x;
+		scale.y = (float)height * item->transform.scale.y;
 	}
 
-	add_alignment(&base_origin, item->align, (int)scale.x, (int)scale.y);
+	add_alignment(&base_origin, item->transform.alignment, (int) scale.x,
+			(int) scale.y);
 
 	matrix4_identity(&item->box_transform);
 	matrix4_scale3f(&item->box_transform, &item->box_transform,
@@ -372,9 +374,9 @@ static void update_item_transform(struct obs_scene_item *item)
 	matrix4_translate3f(&item->box_transform, &item->box_transform,
 			-base_origin.x, -base_origin.y, 0.0f);
 	matrix4_rotate_aa4f(&item->box_transform, &item->box_transform,
-			0.0f, 0.0f, 1.0f, RAD(item->rot));
+			0.0f, 0.0f, 1.0f, RAD(item->transform.rot));
 	matrix4_translate3f(&item->box_transform, &item->box_transform,
-			item->pos.x, item->pos.y, 0.0f);
+			item->transform.pos.x, item->transform.pos.y, 0.0f);
 
 	/* ----------------------- */
 
@@ -617,33 +619,35 @@ static void scene_load_item(struct obs_scene *scene, obs_data_t *item_data)
 	if (obs_data_has_user_value(item_data, "id"))
 		item->id = obs_data_get_int(item_data, "id");
 
-	item->rot     = (float)obs_data_get_double(item_data, "rot");
-	item->align   = (uint32_t)obs_data_get_int(item_data, "align");
+	item->transform.rot = (float)obs_data_get_double(item_data, "rot");
+	item->transform.alignment = (uint32_t) obs_data_get_int(item_data,
+			"align");
 	visible = obs_data_get_bool(item_data, "visible");
 	lock = obs_data_get_bool(item_data, "locked");
-	obs_data_get_vec2(item_data, "pos",    &item->pos);
-	obs_data_get_vec2(item_data, "scale",  &item->scale);
+	obs_data_get_vec2(item_data, "pos",    &item->transform.pos);
+	obs_data_get_vec2(item_data, "scale",  &item->transform.scale);
 
 	obs_data_release(item->private_settings);
-	item->private_settings =
-		obs_data_get_obj(item_data, "private_settings");
+	item->private_settings = obs_data_get_obj(item_data,
+			"private_settings");
 	if (!item->private_settings)
 		item->private_settings = obs_data_create();
 
 	set_visibility(item, visible);
 	obs_sceneitem_set_locked(item, lock);
 
-	item->bounds_type =
-		(enum obs_bounds_type)obs_data_get_int(item_data,
-				"bounds_type");
-	item->bounds_align =
-		(uint32_t)obs_data_get_int(item_data, "bounds_align");
-	obs_data_get_vec2(item_data, "bounds", &item->bounds);
+	item->transform.bounds_type = (enum obs_bounds_type) obs_data_get_int(
+			item_data, "bounds_type");
+	item->transform.bounds_alignment = (uint32_t) obs_data_get_int(
+			item_data, "bounds_align");
+	obs_data_get_vec2(item_data, "bounds", &item->transform.bounds);
 
-	item->crop.left   = (uint32_t)obs_data_get_int(item_data, "crop_left");
-	item->crop.top    = (uint32_t)obs_data_get_int(item_data, "crop_top");
-	item->crop.right  = (uint32_t)obs_data_get_int(item_data, "crop_right");
-	item->crop.bottom = (uint32_t)obs_data_get_int(item_data, "crop_bottom");
+	item->crop.left   = (uint32_t) obs_data_get_int(item_data, "crop_left");
+	item->crop.top    = (uint32_t) obs_data_get_int(item_data, "crop_top");
+	item->crop.right  = (uint32_t) obs_data_get_int(item_data,
+			"crop_right");
+	item->crop.bottom = (uint32_t) obs_data_get_int(item_data,
+			"crop_bottom");
 
 	scale_filter_str = obs_data_get_string(item_data, "scale_filter");
 	item->scale_filter = OBS_SCALE_DISABLE;
@@ -707,21 +711,24 @@ static void scene_save_item(obs_data_array_t *array,
 	const char *name     = obs_source_get_name(item->source);
 	const char *scale_filter;
 
-	obs_data_set_string(item_data, "name",         name);
-	obs_data_set_bool  (item_data, "visible",      item->user_visible);
-	obs_data_set_bool  (item_data, "locked",       item->locked);
-	obs_data_set_double(item_data, "rot",          item->rot);
-	obs_data_set_vec2 (item_data, "pos",          &item->pos);
-	obs_data_set_vec2 (item_data, "scale",        &item->scale);
-	obs_data_set_int   (item_data, "align",        (int)item->align);
-	obs_data_set_int   (item_data, "bounds_type",  (int)item->bounds_type);
-	obs_data_set_int   (item_data, "bounds_align", (int)item->bounds_align);
-	obs_data_set_vec2 (item_data, "bounds",       &item->bounds);
-	obs_data_set_int  (item_data, "crop_left",    (int)item->crop.left);
-	obs_data_set_int  (item_data, "crop_top",     (int)item->crop.top);
-	obs_data_set_int  (item_data, "crop_right",   (int)item->crop.right);
-	obs_data_set_int  (item_data, "crop_bottom",  (int)item->crop.bottom);
-	obs_data_set_int  (item_data, "id",           item->id);
+	obs_data_set_string(item_data, "name", name);
+	obs_data_set_bool  (item_data, "visible", item->user_visible);
+	obs_data_set_bool  (item_data, "locked", item->locked);
+	obs_data_set_double(item_data, "rot", item->transform.rot);
+	obs_data_set_vec2  (item_data, "pos", &item->transform.pos);
+	obs_data_set_vec2  (item_data, "scale", &item->transform.scale);
+	obs_data_set_int   (item_data, "align", (int) item->transform
+			.alignment);
+	obs_data_set_int   (item_data, "bounds_type",
+			(int) item->transform.bounds_type);
+	obs_data_set_int   (item_data, "bounds_align",
+			(int) item->transform.bounds_alignment);
+	obs_data_set_vec2  (item_data, "bounds", &item->transform.bounds);
+	obs_data_set_int   (item_data, "crop_left", (int) item->crop.left);
+	obs_data_set_int   (item_data, "crop_top", (int) item->crop.top);
+	obs_data_set_int   (item_data, "crop_right", (int) item->crop.right);
+	obs_data_set_int   (item_data, "crop_bottom", (int) item->crop.bottom);
+	obs_data_set_int   (item_data, "id", item->id);
 
 	if (item->scale_filter == OBS_SCALE_POINT)
 		scale_filter = "point";
@@ -1119,19 +1126,22 @@ obs_scene_t *obs_scene_duplicate(obs_scene_t *scene, const char *name,
 				set_visibility(new_item, false);
 
 			new_item->selected = item->selected;
-			new_item->pos = item->pos;
-			new_item->rot = item->rot;
-			new_item->scale = item->scale;
-			new_item->align = item->align;
+			new_item->transform.pos = item->transform.pos;
+			new_item->transform.rot = item->transform.rot;
+			new_item->transform.scale = item->transform.scale;
+			new_item->transform.alignment = item->transform
+					.alignment;
 			new_item->last_width = item->last_width;
 			new_item->last_height = item->last_height;
 			new_item->output_scale = item->output_scale;
 			new_item->scale_filter = item->scale_filter;
 			new_item->box_transform = item->box_transform;
 			new_item->draw_transform = item->draw_transform;
-			new_item->bounds_type = item->bounds_type;
-			new_item->bounds_align = item->bounds_align;
-			new_item->bounds = item->bounds;
+			new_item->transform.bounds_type = item->transform
+					.bounds_type;
+			new_item->transform.bounds_alignment = item->transform
+					.bounds_alignment;
+			new_item->transform.bounds = item->transform.bounds;
 
 			new_item->toggle_visibility =
 					OBS_INVALID_HOTKEY_PAIR_ID;
@@ -1376,13 +1386,13 @@ obs_sceneitem_t *obs_scene_add(obs_scene_t *scene, obs_source_t *source)
 	item->id      = ++scene->id_counter;
 	item->parent  = scene;
 	item->ref     = 1;
-	item->align   = OBS_ALIGN_TOP | OBS_ALIGN_LEFT;
+	item->transform.alignment = OBS_ALIGN_TOP | OBS_ALIGN_LEFT;
 	item->actions_mutex = mutex;
 	item->user_visible = true;
 	item->locked = false;
 	item->private_settings = obs_data_create();
 	os_atomic_set_long(&item->active_refs, 1);
-	vec2_set(&item->scale, 1.0f, 1.0f);
+	vec2_set(&item->transform.scale, 1.0f, 1.0f);
 	matrix4_identity(&item->draw_transform);
 	matrix4_identity(&item->box_transform);
 
@@ -1529,7 +1539,7 @@ bool obs_sceneitem_selected(const obs_sceneitem_t *item)
 void obs_sceneitem_set_pos(obs_sceneitem_t *item, const struct vec2 *pos)
 {
 	if (item) {
-		vec2_copy(&item->pos, pos);
+		vec2_copy(&item->transform.pos, pos);
 		update_item_transform(item);
 	}
 }
@@ -1537,7 +1547,7 @@ void obs_sceneitem_set_pos(obs_sceneitem_t *item, const struct vec2 *pos)
 void obs_sceneitem_set_rot(obs_sceneitem_t *item, float rot)
 {
 	if (item) {
-		item->rot = rot;
+		item->transform.rot = rot;
 		update_item_transform(item);
 	}
 }
@@ -1545,7 +1555,7 @@ void obs_sceneitem_set_rot(obs_sceneitem_t *item, float rot)
 void obs_sceneitem_set_scale(obs_sceneitem_t *item, const struct vec2 *scale)
 {
 	if (item) {
-		vec2_copy(&item->scale, scale);
+		vec2_copy(&item->transform.scale, scale);
 		update_item_transform(item);
 	}
 }
@@ -1553,7 +1563,7 @@ void obs_sceneitem_set_scale(obs_sceneitem_t *item, const struct vec2 *scale)
 void obs_sceneitem_set_alignment(obs_sceneitem_t *item, uint32_t alignment)
 {
 	if (item) {
-		item->align = alignment;
+		item->transform.alignment = alignment;
 		update_item_transform(item);
 	}
 }
@@ -1652,7 +1662,7 @@ void obs_sceneitem_set_bounds_type(obs_sceneitem_t *item,
 		enum obs_bounds_type type)
 {
 	if (item) {
-		item->bounds_type = type;
+		item->transform.bounds_type = type;
 		update_item_transform(item);
 	}
 }
@@ -1661,7 +1671,7 @@ void obs_sceneitem_set_bounds_alignment(obs_sceneitem_t *item,
 		uint32_t alignment)
 {
 	if (item) {
-		item->bounds_align = alignment;
+		item->transform.bounds_alignment = alignment;
 		update_item_transform(item);
 	}
 }
@@ -1669,7 +1679,7 @@ void obs_sceneitem_set_bounds_alignment(obs_sceneitem_t *item,
 void obs_sceneitem_set_bounds(obs_sceneitem_t *item, const struct vec2 *bounds)
 {
 	if (item) {
-		item->bounds = *bounds;
+		item->transform.bounds = *bounds;
 		update_item_transform(item);
 	}
 }
@@ -1677,52 +1687,52 @@ void obs_sceneitem_set_bounds(obs_sceneitem_t *item, const struct vec2 *bounds)
 void obs_sceneitem_get_pos(const obs_sceneitem_t *item, struct vec2 *pos)
 {
 	if (item)
-		vec2_copy(pos, &item->pos);
+		vec2_copy(pos, &item->transform.pos);
 }
 
 float obs_sceneitem_get_rot(const obs_sceneitem_t *item)
 {
-	return item ? item->rot : 0.0f;
+	return item ? item->transform.rot : 0.0f;
 }
 
 void obs_sceneitem_get_scale(const obs_sceneitem_t *item, struct vec2 *scale)
 {
 	if (item)
-		vec2_copy(scale, &item->scale);
+		vec2_copy(scale, &item->transform.scale);
 }
 
 uint32_t obs_sceneitem_get_alignment(const obs_sceneitem_t *item)
 {
-	return item ? item->align : 0;
+	return item ? item->transform.alignment : 0;
 }
 
 enum obs_bounds_type obs_sceneitem_get_bounds_type(const obs_sceneitem_t *item)
 {
-	return item ? item->bounds_type : OBS_BOUNDS_NONE;
+	return item ? item->transform.bounds_type : OBS_BOUNDS_NONE;
 }
 
 uint32_t obs_sceneitem_get_bounds_alignment(const obs_sceneitem_t *item)
 {
-	return item ? item->bounds_align : 0;
+	return item ? item->transform.bounds_alignment : 0;
 }
 
 void obs_sceneitem_get_bounds(const obs_sceneitem_t *item, struct vec2 *bounds)
 {
 	if (item)
-		*bounds = item->bounds;
+		*bounds = item->transform.bounds;
 }
 
 void obs_sceneitem_get_info(const obs_sceneitem_t *item,
 		struct obs_transform_info *info)
 {
 	if (item && info) {
-		info->pos              = item->pos;
-		info->rot              = item->rot;
-		info->scale            = item->scale;
-		info->alignment        = item->align;
-		info->bounds_type      = item->bounds_type;
-		info->bounds_alignment = item->bounds_align;
-		info->bounds           = item->bounds;
+		info->pos              = item->transform.pos;
+		info->rot              = item->transform.rot;
+		info->scale            = item->transform.scale;
+		info->alignment        = item->transform.alignment;
+		info->bounds_type      = item->transform.bounds_type;
+		info->bounds_alignment = item->transform.bounds_alignment;
+		info->bounds           = item->transform.bounds;
 	}
 }
 
@@ -1730,13 +1740,13 @@ void obs_sceneitem_set_info(obs_sceneitem_t *item,
 		const struct obs_transform_info *info)
 {
 	if (item && info) {
-		item->pos          = info->pos;
-		item->rot          = info->rot;
-		item->scale        = info->scale;
-		item->align        = info->alignment;
-		item->bounds_type  = info->bounds_type;
-		item->bounds_align = info->bounds_alignment;
-		item->bounds       = info->bounds;
+		item->transform.pos              = info->pos;
+		item->transform.rot              = info->rot;
+		item->transform.scale            = info->scale;
+		item->transform.alignment        = info->alignment;
+		item->transform.bounds_type      = info->bounds_type;
+		item->transform.bounds_alignment = info->bounds_alignment;
+		item->transform.bounds           = info->bounds;
 		update_item_transform(item);
 	}
 }
