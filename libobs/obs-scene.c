@@ -1382,10 +1382,11 @@ obs_sceneitem_t *obs_scene_add(obs_scene_t *scene, obs_source_t *source)
 	}
 
 	item = bzalloc(sizeof(struct obs_scene_item));
-	item->source  = source;
-	item->id      = ++scene->id_counter;
-	item->parent  = scene;
-	item->ref     = 1;
+	item->source     = source;
+	item->id         = ++scene->id_counter;
+	item->parent     = scene;
+	item->ref        = 1;
+	item->edit_index = 0;
 	item->transform.alignment = OBS_ALIGN_TOP | OBS_ALIGN_LEFT;
 	item->actions_mutex = mutex;
 	item->user_visible = true;
@@ -1451,6 +1452,7 @@ static void obs_sceneitem_destroy(obs_sceneitem_t *item)
 		pthread_mutex_destroy(&item->actions_mutex);
 		if (item->source)
 			obs_source_release(item->source);
+		da_free(item->user_edits);
 		da_free(item->audio_actions);
 		bfree(item);
 	}
@@ -2036,4 +2038,90 @@ obs_data_t *obs_sceneitem_get_private_settings(obs_sceneitem_t *item)
 
 	obs_data_addref(item->private_settings);
 	return item->private_settings;
+}
+
+struct obs_user_edit userEdit;
+
+void obs_sceneitem_pre_record_edit(obs_sceneitem_t *item)
+{
+	obs_sceneitem_get_info(item, &userEdit.transform);
+	obs_sceneitem_get_crop(item, &userEdit.crop);
+	obs_sceneitem_get_box_transform(item, &userEdit.box);
+}
+
+void obs_sceneitem_save_edit(obs_sceneitem_t *item)
+{
+	obs_sceneitem_record_user_action(item);
+}
+
+void obs_sceneitem_record_edit(obs_sceneitem_t *item)
+{
+	obs_sceneitem_get_info(item, &userEdit.transform);
+	obs_sceneitem_get_crop(item, &userEdit.crop);
+	obs_sceneitem_get_box_transform(item, &userEdit.box);
+	obs_sceneitem_record_user_action(item);
+}
+
+void obs_sceneitem_record_user_action(obs_sceneitem_t *item)
+{
+	if (!obs_ptr_valid(item, "obs_sceneitem_record_user_action"))
+		return;
+
+	size_t len = sizeof(struct obs_user_edit);
+	struct obs_user_edit *edit = bmalloc(len);
+	memcpy(edit, &userEdit, len);
+
+	item->edit_index++;
+
+	// we only need to let go changes that were undone
+	if (item->user_edits.num >= item->edit_index) {
+		da_erase_range(item->user_edits, item->edit_index,
+				item->user_edits.num);
+	}
+
+	da_push_back(item->user_edits, edit);
+	blog(LOG_INFO, "record edit_index %ld edits_num %ld", item->edit_index,
+			item->user_edits.num);
+}
+
+void obs_sceneitem_replay_user_action(obs_sceneitem_t *item,
+		struct obs_user_edit *edit)
+{
+	obs_sceneitem_defer_update_begin(item);
+
+	obs_sceneitem_set_info(item, &edit->transform);
+	obs_sceneitem_set_crop(item, &edit->crop);
+	matrix4_copy(&item->box_transform, &edit->box);
+
+	obs_sceneitem_defer_update_end(item);
+	blog(LOG_INFO, "replay edit_index %ld edits_num %ld", item->edit_index,
+			item->user_edits.num);
+}
+
+void obs_sceneitem_undo_user_action(obs_sceneitem_t *item)
+{
+	if (!obs_ptr_valid(item, "obs_sceneitem_undo_user_action"))
+		return;
+
+	if (item->edit_index == 0)
+		return;
+
+	struct obs_user_edit edit = item->user_edits
+			.array[--item->edit_index];
+
+	obs_sceneitem_replay_user_action(item, &edit);
+}
+
+void obs_sceneitem_redo_user_action(obs_sceneitem_t *item)
+{
+	if (!obs_ptr_valid(item, "obs_sceneitem_redo_user_action"))
+		return;
+
+	if (item->edit_index >= item->user_edits.num)
+		return;
+
+	struct obs_user_edit edit = item->user_edits
+			.array[item->edit_index++];
+
+	obs_sceneitem_replay_user_action(item, &edit);
 }

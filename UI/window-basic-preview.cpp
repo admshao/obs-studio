@@ -476,6 +476,8 @@ void OBSBasicPreview::mousePressEvent(QMouseEvent *event)
 
 	mouseOverItems = SelectedAtPos(startPos);
 	vec2_zero(&lastMoveOffset);
+
+	main->PreRecordUserSceneEdit();
 }
 
 static bool select_one(obs_scene_t *scene, obs_sceneitem_t *item, void *param)
@@ -538,6 +540,10 @@ void OBSBasicPreview::mouseReleaseEvent(QMouseEvent *event)
 		mouseDown   = false;
 		mouseMoved  = false;
 		cropping    = false;
+
+		OBSBasic *main = reinterpret_cast<OBSBasic *>(App()
+				->GetMainWindow());
+		main->SaveUserSceneEdit();
 	}
 }
 
@@ -1054,7 +1060,7 @@ void OBSBasicPreview::mouseMoveEvent(QMouseEvent *event)
 		vec2 pos = GetMouseEventPos(event);
 
 		if (!mouseMoved && !mouseOverItems &&
-		    stretchHandle == ItemHandle::None) {
+				stretchHandle == ItemHandle::None) {
 			ProcessClick(startPos);
 			mouseOverItems = SelectedAtPos(startPos);
 		}

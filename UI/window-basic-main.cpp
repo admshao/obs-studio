@@ -5249,6 +5249,66 @@ void OBSBasic::on_actionEditTransform_triggered()
 static obs_transform_info copiedTransformInfo;
 static obs_sceneitem_crop copiedCropInfo;
 
+static bool pre_record_sceneitem_edit(obs_scene_t *scene, obs_sceneitem_t *item,
+		void *param)
+{
+	if (!obs_sceneitem_selected(item))
+		return true;
+
+	obs_sceneitem_pre_record_edit(item);
+
+	UNUSED_PARAMETER(scene);
+	UNUSED_PARAMETER(param);
+	return true;
+}
+
+static bool save_sceneitem_edit(obs_scene_t *scene, obs_sceneitem_t *item,
+		void *param)
+{
+	if (!obs_sceneitem_selected(item))
+		return true;
+
+	obs_sceneitem_save_edit(item);
+
+	UNUSED_PARAMETER(scene);
+	UNUSED_PARAMETER(param);
+	return true;
+}
+
+static bool record_sceneitem_edit(obs_scene_t *scene, obs_sceneitem_t *item,
+		void *param)
+{
+	if (!obs_sceneitem_selected(item))
+		return true;
+
+	obs_sceneitem_record_edit(item);
+
+	UNUSED_PARAMETER(scene);
+	UNUSED_PARAMETER(param);
+	return true;
+}
+
+void OBSBasic::PreRecordUserSceneEdit()
+{
+	OBSBasic *main = reinterpret_cast<OBSBasic*>(App()->GetMainWindow());
+	OBSScene scene = main->GetCurrentScene();
+	obs_scene_enum_items(scene, pre_record_sceneitem_edit, this);
+}
+
+void OBSBasic::SaveUserSceneEdit()
+{
+	OBSBasic *main = reinterpret_cast<OBSBasic*>(App()->GetMainWindow());
+	OBSScene scene = main->GetCurrentScene();
+	obs_scene_enum_items(scene, save_sceneitem_edit, this);
+}
+
+void OBSBasic::RecordUserSceneEdit()
+{
+	OBSBasic *main = reinterpret_cast<OBSBasic*>(App()->GetMainWindow());
+	OBSScene scene = main->GetCurrentScene();
+	obs_scene_enum_items(scene, record_sceneitem_edit, this);
+}
+
 void OBSBasic::on_actionCopyTransform_triggered()
 {
 	auto func = [](obs_scene_t *scene, obs_sceneitem_t *item, void *param)
@@ -5278,6 +5338,7 @@ void OBSBasic::on_actionPasteTransform_triggered()
 			return true;
 
 		obs_sceneitem_defer_update_begin(item);
+		record_sceneitem_edit(scene, item, param);
 		obs_sceneitem_set_info(item, &copiedTransformInfo);
 		obs_sceneitem_set_crop(item, &copiedCropInfo);
 		obs_sceneitem_defer_update_end(item);
@@ -5298,6 +5359,7 @@ void OBSBasic::on_actionResetTransform_triggered()
 			return true;
 
 		obs_sceneitem_defer_update_begin(item);
+		record_sceneitem_edit(scene, item, param);
 
 		obs_transform_info info;
 		vec2_set(&info.pos, 0.0f, 0.0f);
@@ -5307,9 +5369,9 @@ void OBSBasic::on_actionResetTransform_triggered()
 		info.bounds_type = OBS_BOUNDS_NONE;
 		info.bounds_alignment = OBS_ALIGN_CENTER;
 		vec2_set(&info.bounds, 0.0f, 0.0f);
-		obs_sceneitem_set_info(item, &info);
 
 		obs_sceneitem_crop crop = {};
+		obs_sceneitem_set_info(item, &info);
 		obs_sceneitem_set_crop(item, &crop);
 
 		obs_sceneitem_defer_update_end(item);
@@ -5319,6 +5381,38 @@ void OBSBasic::on_actionResetTransform_triggered()
 		return true;
 	};
 
+	obs_scene_enum_items(GetCurrentScene(), func, nullptr);
+}
+
+void OBSBasic::on_actionUndo_triggered()
+{
+	auto func = [] (obs_scene_t *scene, obs_sceneitem_t *item, void *param)
+	{
+		if (!obs_sceneitem_selected(item))
+			return true;
+
+		obs_sceneitem_undo_user_action(item);
+
+		UNUSED_PARAMETER(scene);
+		UNUSED_PARAMETER(param);
+		return true;
+	};
+	obs_scene_enum_items(GetCurrentScene(), func, nullptr);
+}
+
+void OBSBasic::on_actionRedo_triggered()
+{
+	auto func = [] (obs_scene_t *scene, obs_sceneitem_t *item, void *param)
+	{
+		if (!obs_sceneitem_selected(item))
+			return true;
+
+		obs_sceneitem_redo_user_action(item);
+
+		UNUSED_PARAMETER(scene);
+		UNUSED_PARAMETER(param);
+		return true;
+	};
 	obs_scene_enum_items(GetCurrentScene(), func, nullptr);
 }
 
@@ -5370,6 +5464,7 @@ static bool RotateSelectedSources(obs_scene_t *scene, obs_sceneitem_t *item,
 	if (!obs_sceneitem_selected(item))
 		return true;
 
+	record_sceneitem_edit(scene, item, param);
 	float rot = *reinterpret_cast<float*>(param);
 
 	vec3 tl = GetItemTL(item);
@@ -5411,6 +5506,8 @@ static bool MultiplySelectedItemScale(obs_scene_t *scene, obs_sceneitem_t *item,
 
 	if (!obs_sceneitem_selected(item))
 		return true;
+
+	record_sceneitem_edit(scene, item, param);
 
 	vec3 tl = GetItemTL(item);
 
@@ -5463,6 +5560,8 @@ static bool CenterAlignSelectedItems(obs_scene_t *scene, obs_sceneitem_t *item,
 	itemInfo.bounds_type = boundsType;
 	itemInfo.bounds_alignment = OBS_ALIGN_CENTER;
 
+	record_sceneitem_edit(scene, item, param);
+
 	obs_sceneitem_set_info(item, &itemInfo);
 
 	UNUSED_PARAMETER(scene);
@@ -5492,6 +5591,8 @@ void OBSBasic::on_actionCenterToScreen_triggered()
 
 		if (!obs_sceneitem_selected(item))
 			return true;
+
+		record_sceneitem_edit(scene, item, param);
 
 		obs_get_video_info(&ovi);
 
@@ -5541,7 +5642,7 @@ void OBSBasic::Nudge(int dist, MoveDir dir)
 		MoveDir dir;
 	} info = {(float)dist, dir};
 
-	auto func = [] (obs_scene_t*, obs_sceneitem_t *item, void *param)
+	auto func = [] (obs_scene_t* scene, obs_sceneitem_t *item, void *param)
 	{
 		if (obs_sceneitem_locked(item))
 			return true;
@@ -5561,6 +5662,8 @@ void OBSBasic::Nudge(int dist, MoveDir dir)
 		case MoveDir::Left:  dir.x = -info->dist; break;
 		case MoveDir::Right: dir.x =  info->dist; break;
 		}
+
+		record_sceneitem_edit(scene, item, param);
 
 		obs_sceneitem_get_pos(item, &pos);
 		vec2_add(&pos, &pos, &dir);

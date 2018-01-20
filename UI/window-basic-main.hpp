@@ -595,6 +595,8 @@ private slots:
 	void on_actionEditTransform_triggered();
 	void on_actionCopyTransform_triggered();
 	void on_actionPasteTransform_triggered();
+	void on_actionUndo_triggered();
+	void on_actionRedo_triggered();
 	void on_actionRotate90CW_triggered();
 	void on_actionRotate90CCW_triggered();
 	void on_actionRotate180_triggered();
@@ -723,6 +725,10 @@ private slots:
 
 public slots:
 	void on_actionResetTransform_triggered();
+
+	void PreRecordUserSceneEdit();
+	void SaveUserSceneEdit();
+	void RecordUserSceneEdit();
 
 public:
 	explicit OBSBasic(QWidget *parent = 0);

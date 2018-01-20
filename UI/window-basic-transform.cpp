@@ -275,6 +275,7 @@ void OBSBasicTransform::OnControlChanged()
 	oti.bounds.y         = float(ui->boundsHeight->value());
 
 	ignoreTransformSignal = true;
+	main->RecordUserSceneEdit();
 	obs_sceneitem_set_info(item, &oti);
 	ignoreTransformSignal = false;
 }
@@ -291,6 +292,7 @@ void OBSBasicTransform::OnCropChanged()
 	crop.bottom = uint32_t(ui->cropBottom->value());
 
 	ignoreTransformSignal = true;
+	main->RecordUserSceneEdit();
 	obs_sceneitem_set_crop(item, &crop);
 	ignoreTransformSignal = false;
 }

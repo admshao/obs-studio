@@ -165,6 +165,9 @@
      <addaction name="actionPasteTransform"/>
      <addaction name="actionResetTransform"/>
      <addaction name="separator"/>
+     <addaction name="actionUndo"/>
+     <addaction name="actionRedo"/>
+     <addaction name="separator"/>
      <addaction name="actionRotate90CW"/>
      <addaction name="actionRotate90CCW"/>
      <addaction name="actionRotate180"/>
@@ -1218,19 +1221,19 @@
    </property>
   </action>
   <action name="actionUndo">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>Basic.MainMenu.Edit.Undo</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Z</string>
+   </property>
   </action>
   <action name="actionRedo">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>Basic.MainMenu.Edit.Redo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Z</string>
    </property>
   </action>
   <action name="actionEditTransform">

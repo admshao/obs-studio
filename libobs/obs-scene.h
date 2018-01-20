@@ -28,6 +28,12 @@ struct item_action {
 	uint64_t timestamp;
 };
 
+struct obs_user_edit {
+	struct matrix4 box;
+	struct obs_transform_info transform;
+	struct obs_sceneitem_crop crop;
+};
+
 struct obs_scene_item {
 	volatile long         ref;
 	volatile bool         removed;
@@ -46,6 +52,9 @@ struct obs_scene_item {
 	gs_texrender_t        *item_render;
 	struct obs_transform_info transform;
 	struct obs_sceneitem_crop crop;
+
+	size_t edit_index;
+	DARRAY(struct obs_user_edit) user_edits;
 
 	/* last width/height of the source, this is used to check whether
 	 * the transform needs updating */

@@ -1371,6 +1371,16 @@ EXPORT void obs_sceneitem_defer_update_end(obs_sceneitem_t *item);
  * automatically.  Returns an incremented reference. */
 EXPORT obs_data_t *obs_sceneitem_get_private_settings(obs_sceneitem_t *item);
 
+EXPORT void obs_sceneitem_pre_record_edit(obs_sceneitem_t *item);
+
+EXPORT void obs_sceneitem_save_edit(obs_sceneitem_t *item);
+
+EXPORT void obs_sceneitem_record_edit(obs_sceneitem_t *item);
+
+EXPORT void obs_sceneitem_record_user_action(obs_sceneitem_t *item);
+
+EXPORT void obs_sceneitem_redo_user_action(obs_sceneitem_t *item);
+EXPORT void obs_sceneitem_undo_user_action(obs_sceneitem_t *item);
 
 /* ------------------------------------------------------------------------- */
 /* Outputs */
