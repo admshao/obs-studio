@@ -14,11 +14,65 @@
 
 /* TODO: make C++ math classes and clean up code here later */
 
+static obs_source_t *CreateLabel(const char *name)
+{
+	obs_data_t *settings = obs_data_create();
+	obs_data_t *font = obs_data_create();
+#if defined(_WIN32)
+	obs_data_set_string(font, "face", "Arial");
+#elif defined(__APPLE__)
+	obs_data_set_string(font, "face", "Helvetica");
+#else
+	obs_data_set_string(font, "face", "Monospace");
+#endif
+	obs_data_set_int(font, "flags", 0);
+	obs_data_set_int(font, "size", 12);
+	obs_data_set_obj(settings, "font", font);
+	obs_data_set_string(settings, "text", name);
+	obs_data_set_bool(settings, "outline", true);
+	obs_source_t *txtSource = obs_source_create_private("text_ft2_source",
+			name, settings);
+	obs_data_release(font);
+	obs_data_release(settings);
+	return txtSource;
+}
+
 OBSBasicPreview::OBSBasicPreview(QWidget *parent, Qt::WindowFlags flags)
 	: OBSQTDisplay(parent, flags)
 {
 	ResetScrollingOffset();
 	setMouseTracking(true);
+}
+
+OBSBasicPreview::~OBSBasicPreview() {
+	gs_vbdata_destroy(helperLinesVB);
+	obs_source_release(guideLabelLeft);
+	obs_source_release(guideLabelTop);
+	obs_source_release(guideLabelRight);
+	obs_source_release(guideLabelBottom);
+}
+
+void OBSBasicPreview::InitHelperSpacer()
+{
+	helperLinesVB = gs_vbdata_create();
+	helperLinesVB->num = 8;
+	helperLinesVB->points = (vec3*)bzalloc(sizeof(struct vec3)
+			* helperLinesVB->num);
+	helperLinesVB->normals = (vec3*)bzalloc(sizeof(struct vec3)
+			* helperLinesVB->num);
+	helperLinesVB->colors = (uint32_t*)bzalloc(sizeof(uint32_t)
+			* helperLinesVB->num);
+	helperLinesVB->num_tex = 1;
+	helperLinesVB->tvarray = (gs_tvertarray*)bzalloc(sizeof(
+			struct gs_tvertarray));
+	helperLinesVB->tvarray[0].width = 2;
+	helperLinesVB->tvarray[0].array = bzalloc(sizeof(struct vec2)
+			* helperLinesVB->num);
+
+	guideLabelTop = CreateLabel("Spacing Helper - Top");
+	guideLabelRight = CreateLabel("Spacing Helper - Right");
+	guideLabelBottom = CreateLabel("Spacing Helper - Bottom");
+	guideLabelLeft = CreateLabel("Spacing Helper - Left");
 }
 
 vec2 OBSBasicPreview::GetMouseEventPos(QMouseEvent *event)

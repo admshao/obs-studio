@@ -57,6 +57,12 @@ private:
 	int32_t      scalingLevel   = 0;
 	float        scalingAmount  = 1.0f;
 
+	struct gs_vb_data *helperLinesVB;
+	obs_source_t *guideLabelLeft;
+	obs_source_t *guideLabelTop;
+	obs_source_t *guideLabelRight;
+	obs_source_t *guideLabelBottom;
+
 	static vec2 GetMouseEventPos(QMouseEvent *event);
 	static bool DrawSelectedItem(obs_scene_t *scene, obs_sceneitem_t *item,
 		void *param);
@@ -84,6 +90,7 @@ private:
 
 public:
 	OBSBasicPreview(QWidget *parent, Qt::WindowFlags flags = 0);
+	~OBSBasicPreview();
 
 	virtual void keyPressEvent(QKeyEvent *event) override;
 	virtual void keyReleaseEvent(QKeyEvent *event) override;
@@ -95,6 +102,7 @@ public:
 	virtual void mouseMoveEvent(QMouseEvent *event) override;
 
 	void DrawSceneEditing();
+	void InitHelperSpacer();
 
 	inline void SetLocked(bool newLockedVal) {locked = newLockedVal;}
 	inline void ToggleLocked() {locked = !locked;}

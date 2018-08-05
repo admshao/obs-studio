@@ -1479,6 +1479,7 @@ void OBSBasic::OBSInit()
 		throw "Failed to initialize service";
 
 	InitPrimitives();
+	ui->preview->InitHelperSpacer();
 
 	sceneDuplicationMode = config_get_bool(App()->GlobalConfig(),
 				"BasicWindow", "SceneDuplicationMode");
