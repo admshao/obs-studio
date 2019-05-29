@@ -178,6 +178,9 @@
      <addaction name="actionPasteTransform"/>
      <addaction name="actionResetTransform"/>
      <addaction name="separator"/>
+     <addaction name="actionUndoTransform"/>
+     <addaction name="actionRedoTransform"/>
+     <addaction name="separator"/>
      <addaction name="actionRotate90CW"/>
      <addaction name="actionRotate90CCW"/>
      <addaction name="actionRotate180"/>
@@ -1282,20 +1285,20 @@
     <string>Basic.MainMenu.Help.Logs.ViewCurrentLog</string>
    </property>
   </action>
-  <action name="actionUndo">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
+  <action name="actionUndoTransform">
    <property name="text">
     <string>Basic.MainMenu.Edit.Undo</string>
    </property>
-  </action>
-  <action name="actionRedo">
-   <property name="enabled">
-    <bool>false</bool>
+   <property name="shortcut">
+    <string>Ctrl+Z</string>
    </property>
+  </action>
+  <action name="actionRedoTransform">
    <property name="text">
     <string>Basic.MainMenu.Edit.Redo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Z</string>
    </property>
   </action>
   <action name="actionEditTransform">
