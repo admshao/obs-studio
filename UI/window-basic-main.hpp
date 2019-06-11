@@ -73,6 +73,17 @@ enum class QtDataRole {
 	OBSSignals,
 };
 
+struct OBSUserEdit {
+	struct matrix4 box;
+	struct obs_transform_info transform;
+	struct obs_sceneitem_crop crop;
+};
+
+struct UndoRedoInfo {
+	size_t editIndex;
+	std::vector<OBSUserEdit *> userEdits;
+};
+
 struct SavedProjectorInfo {
 	ProjectorType type;
 	int monitor;
@@ -237,6 +248,9 @@ private:
 
 	QScopedPointer<QThread> patronJsonThread;
 	std::string patronJson;
+
+	OBSUserEdit *transformEdit;
+	std::map<std::string, UndoRedoInfo*> undoRedoMap;
 
 	void          UpdateMultiviewProjectorMenu();
 
@@ -679,6 +693,8 @@ private slots:
 	void on_actionEditTransform_triggered();
 	void on_actionCopyTransform_triggered();
 	void on_actionPasteTransform_triggered();
+	void on_actionUndoTransform_triggered();
+	void on_actionRedoTransform_triggered();
 	void on_actionRotate90CW_triggered();
 	void on_actionRotate90CCW_triggered();
 	void on_actionRotate180_triggered();
@@ -812,6 +828,11 @@ private slots:
 
 public slots:
 	void on_actionResetTransform_triggered();
+
+	void PreRecordUserTransformEdit();
+	void SaveUserTransformEdit();
+	void PushTransformEdit(const std::string& itemName, OBSUserEdit *oldEdit,
+			OBSUserEdit *curEdit);
 
 	bool StreamingActive();
 	bool RecordingActive();

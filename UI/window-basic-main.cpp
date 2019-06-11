@@ -2220,6 +2220,16 @@ OBSBasic::~OBSBasic()
 	if (updateCheckThread && updateCheckThread->isRunning())
 		updateCheckThread->wait();
 
+	for (const auto& sceneItemName : undoRedoMap) {
+		for (auto aa : sceneItemName.second->userEdits)
+			delete aa;
+
+		sceneItemName.second->userEdits.clear();
+
+		delete sceneItemName.second;
+	}
+	undoRedoMap.clear();
+
 	delete multiviewProjectorMenu;
 	delete previewProjector;
 	delete studioProgramProjector;
@@ -5970,6 +5980,166 @@ static bool reset_tr(obs_scene_t *scene, obs_sceneitem_t *item, void *param)
 void OBSBasic::on_actionResetTransform_triggered()
 {
 	obs_scene_enum_items(GetCurrentScene(), reset_tr, nullptr);
+}
+
+static bool pre_record_transform_edit(obs_scene_t *scene, obs_sceneitem_t *item,
+		void *param)
+{
+	if (!obs_sceneitem_selected(item))
+		return true;
+
+	OBSUserEdit *edit = new OBSUserEdit;
+	obs_sceneitem_get_info(item, &edit->transform);
+	obs_sceneitem_get_crop(item, &edit->crop);
+	obs_sceneitem_get_box_transform(item, &edit->box);
+
+	OBSUserEdit **trEdit = reinterpret_cast<OBSUserEdit **>(param);
+	*trEdit = edit;
+
+	UNUSED_PARAMETER(scene);
+	return true;
+}
+
+static bool save_transform_edit(obs_scene_t *scene, obs_sceneitem_t *item,
+		void *param)
+{
+	if (!obs_sceneitem_selected(item))
+		return true;
+
+	OBSUserEdit *edit = reinterpret_cast<OBSUserEdit *>(param);
+	obs_source_t *source = obs_sceneitem_get_source(item);
+	const char* item_name = obs_source_get_name(source);
+
+	OBSUserEdit *currentTrEdit = new OBSUserEdit;
+	obs_sceneitem_get_info(item, &currentTrEdit->transform);
+	obs_sceneitem_get_crop(item, &currentTrEdit->crop);
+	obs_sceneitem_get_box_transform(item, &currentTrEdit->box);
+
+	OBSBasic *main = reinterpret_cast<OBSBasic*>(App()->GetMainWindow());
+	main->PushTransformEdit(item_name, edit, currentTrEdit);
+
+	UNUSED_PARAMETER(scene);
+	return true;
+}
+
+void OBSBasic::PreRecordUserTransformEdit()
+{
+	OBSBasic *main = reinterpret_cast<OBSBasic*>(App()->GetMainWindow());
+	OBSScene scene = main->GetCurrentScene();
+	obs_scene_enum_items(scene, pre_record_transform_edit, &transformEdit);
+}
+
+void OBSBasic::SaveUserTransformEdit()
+{
+	OBSBasic *main = reinterpret_cast<OBSBasic*>(App()->GetMainWindow());
+	OBSScene scene = main->GetCurrentScene();
+	obs_scene_enum_items(scene, save_transform_edit, transformEdit);
+}
+
+void OBSBasic::PushTransformEdit(const std::string& itemName,
+		OBSUserEdit *oldEdit, OBSUserEdit *curEdit)
+{
+	if (undoRedoMap.find(itemName) == undoRedoMap.end()) {
+		UndoRedoInfo *undoRedoInfo = new UndoRedoInfo;
+		undoRedoInfo->userEdits.emplace_back(oldEdit);
+		undoRedoInfo->userEdits.emplace_back(curEdit);
+		undoRedoInfo->editIndex = 1;
+
+		undoRedoMap[itemName] = undoRedoInfo;
+
+		blog(LOG_INFO, "record transform edit %ld edits_num %ld",
+				undoRedoInfo->editIndex,
+				undoRedoInfo->userEdits.size());
+	} else {
+		UndoRedoInfo *undoRedoInfo = undoRedoMap[itemName];
+
+		for (size_t i = undoRedoInfo->editIndex;
+				i < undoRedoInfo->userEdits.size()-1;) {
+			delete undoRedoInfo->userEdits[i];
+			undoRedoInfo->userEdits.erase(undoRedoInfo->userEdits
+					.begin() + undoRedoInfo->editIndex + 1);
+		}
+
+		undoRedoInfo->editIndex++;
+		undoRedoInfo->userEdits.emplace_back(curEdit);
+
+		blog(LOG_INFO, "record transform edit %ld edits_num %ld",
+				undoRedoInfo->editIndex,
+				undoRedoInfo->userEdits.size());
+	}
+}
+
+static void replay_user_edit(obs_sceneitem_t *item, OBSUserEdit *edit)
+{
+	obs_sceneitem_defer_update_begin(item);
+
+	obs_sceneitem_set_info(item, &edit->transform);
+	obs_sceneitem_set_crop(item, &edit->crop);
+	obs_sceneitem_set_box_transform(item, &edit->box);
+
+	obs_sceneitem_defer_update_end(item);
+}
+
+static bool undo_user_edit(obs_scene_t *scene, obs_sceneitem_t *item,
+		void *param)
+{
+	if (!obs_sceneitem_selected(item))
+		return true;
+
+	std::map<std::string, UndoRedoInfo*> *undoRedoMap = static_cast<map<
+			string, UndoRedoInfo *> *>(param);
+	obs_source_t *source = obs_sceneitem_get_source(item);
+	const char* itemName = obs_source_get_name(source);
+
+	if (undoRedoMap->find(itemName) != undoRedoMap->end()) {
+		UndoRedoInfo *undoRedoInfo = undoRedoMap->at(itemName);
+		if (undoRedoInfo->editIndex == 0)
+			return true;
+
+		undoRedoInfo->editIndex--;
+		replay_user_edit(item, undoRedoInfo->userEdits.at(
+				undoRedoInfo->editIndex));
+	}
+
+	UNUSED_PARAMETER(scene);
+	return true;
+}
+
+
+static bool redo_user_edit(obs_scene_t *scene, obs_sceneitem_t *item,
+		void *param)
+{
+	if (!obs_sceneitem_selected(item))
+		return true;
+
+	std::map<std::string, UndoRedoInfo*> *undoRedoMap = static_cast<map<
+			string, UndoRedoInfo *> *>(param);
+	obs_source_t *source = obs_sceneitem_get_source(item);
+	const char* itemName = obs_source_get_name(source);
+
+	if (undoRedoMap->find(itemName) != undoRedoMap->end()) {
+		UndoRedoInfo *undoRedoInfo = undoRedoMap->at(itemName);
+		if (undoRedoInfo->editIndex >=
+				undoRedoInfo->userEdits.size() - 1)
+			return true;
+
+		undoRedoInfo->editIndex++;
+		replay_user_edit(item, undoRedoInfo->userEdits.at(
+				undoRedoInfo->editIndex));
+	}
+
+	UNUSED_PARAMETER(scene);
+	return true;
+}
+
+void OBSBasic::on_actionUndoTransform_triggered()
+{
+	obs_scene_enum_items(GetCurrentScene(), undo_user_edit, &undoRedoMap);
+}
+
+void OBSBasic::on_actionRedoTransform_triggered()
+{
+	obs_scene_enum_items(GetCurrentScene(), redo_user_edit, &undoRedoMap);
 }
 
 static void GetItemBox(obs_sceneitem_t *item, vec3 &tl, vec3 &br)

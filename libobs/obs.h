@@ -1529,6 +1529,8 @@ struct obs_sceneitem_crop {
 	int bottom;
 };
 
+EXPORT void obs_sceneitem_set_box_transform(obs_sceneitem_t *item,
+		const struct matrix4 *box);
 EXPORT void obs_sceneitem_set_crop(obs_sceneitem_t *item,
 		const struct obs_sceneitem_crop *crop);
 EXPORT void obs_sceneitem_get_crop(const obs_sceneitem_t *item,

@@ -602,8 +602,13 @@ void OBSBasicPreview::mouseReleaseEvent(QMouseEvent *event)
 	if (mouseDown) {
 		vec2 pos = GetMouseEventPos(event);
 
-		if (!mouseMoved)
+		if (mouseMoved) {
+			OBSBasic *main = reinterpret_cast<OBSBasic *>(App()
+					->GetMainWindow());
+			main->SaveUserTransformEdit();
+		} else {
 			ProcessClick(pos);
+		}
 
 		if (stretchGroup) {
 			obs_sceneitem_defer_group_resize_end(stretchGroup);
@@ -1198,6 +1203,12 @@ void OBSBasicPreview::mouseMoveEvent(QMouseEvent *event)
 
 		} else if (mouseOverItems) {
 			MoveItems(pos);
+		}
+
+		if (!mouseMoved) {
+			OBSBasic *main = reinterpret_cast<OBSBasic *>(App()
+					->GetMainWindow());
+			main->PreRecordUserTransformEdit();
 		}
 
 		mouseMoved = true;

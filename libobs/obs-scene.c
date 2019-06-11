@@ -2220,6 +2220,19 @@ static inline bool crop_equal(const struct obs_sceneitem_crop *crop1,
 	       crop1->bottom == crop2->bottom;
 }
 
+void obs_sceneitem_set_box_transform(obs_sceneitem_t *item,
+		const struct matrix4 *box)
+{
+	if (!obs_ptr_valid(item, "obs_sceneitem_set_box_transform"))
+		return;
+	if (!obs_ptr_valid(box, "obs_sceneitem_set_box_transform"))
+		return;
+
+	matrix4_copy(&item->box_transform, box);
+
+	os_atomic_set_bool(&item->update_transform, true);
+}
+
 void obs_sceneitem_set_crop(obs_sceneitem_t *item,
 		const struct obs_sceneitem_crop *crop)
 {
