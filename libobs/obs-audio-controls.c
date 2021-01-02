@@ -38,6 +38,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 typedef float (*obs_fader_conversion_t)(const float val);
 
+#define REFRESH_RATE_MS 16
+
 struct fader_cb {
 	obs_fader_changed_t callback;
 	void *param;
@@ -783,7 +785,7 @@ obs_volmeter_t *obs_volmeter_create(enum obs_fader_type type)
 
 	volmeter->type = type;
 
-	obs_volmeter_set_update_interval(volmeter, 50);
+	obs_volmeter_set_update_interval(volmeter, REFRESH_RATE_MS);
 
 	return volmeter;
 fail:
@@ -894,12 +896,14 @@ int obs_volmeter_get_nr_channels(obs_volmeter_t *volmeter)
 	int source_nr_audio_channels;
 	int obs_nr_audio_channels;
 
+	pthread_mutex_lock(&volmeter->mutex);
 	if (volmeter->source) {
 		source_nr_audio_channels = get_audio_channels(
 			volmeter->source->sample_info.speakers);
 	} else {
 		source_nr_audio_channels = 1;
 	}
+	pthread_mutex_unlock(&volmeter->mutex);
 
 	struct obs_audio_info audio_info;
 	if (obs_get_audio_info(&audio_info)) {

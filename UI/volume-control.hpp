@@ -65,15 +65,10 @@ private slots:
 	void ClipEnding();
 
 private:
-	obs_volmeter_t *obs_volmeter;
 	static QWeakPointer<VolumeMeterTimer> updateTimer;
 	QSharedPointer<VolumeMeterTimer> updateTimerRef;
 
 	inline void resetLevels();
-	inline void handleChannelCofigurationChange();
-	inline bool detectIdle(uint64_t ts);
-	inline void calculateBallistics(uint64_t ts,
-					qreal timeSinceLastRedraw = 0.0);
 	inline void calculateBallisticsForChannel(int channelNr, uint64_t ts,
 						  qreal timeSinceLastRedraw);
 
@@ -87,9 +82,6 @@ private:
 			 float magnitude, float peak, float peakHold);
 	void paintVTicks(QPainter &painter, int x, int y, int height);
 
-	QMutex dataMutex;
-
-	uint64_t currentLastUpdateTime = 0;
 	float currentMagnitude[MAX_AUDIO_CHANNELS];
 	float currentPeak[MAX_AUDIO_CHANNELS];
 	float currentInputPeak[MAX_AUDIO_CHANNELS];
@@ -124,20 +116,25 @@ private:
 	qreal peakHoldDuration;
 	qreal inputPeakHoldDuration;
 
-	uint64_t lastRedrawTime = 0;
 	int channels = 0;
 	bool clipping = false;
-	bool vertical;
 
 public:
-	explicit VolumeMeter(QWidget *parent = nullptr,
-			     obs_volmeter_t *obs_volmeter = nullptr,
+	obs_volmeter_t *obs_volmeter;
+	bool vertical;
+	uint64_t lastRedrawTime = 0;
+
+	explicit VolumeMeter(obs_volmeter_t *obs_volmeter = nullptr,
 			     bool vertical = false);
 	~VolumeMeter();
 
 	void setLevels(const float magnitude[MAX_AUDIO_CHANNELS],
 		       const float peak[MAX_AUDIO_CHANNELS],
 		       const float inputPeak[MAX_AUDIO_CHANNELS]);
+
+	inline void calculateBallistics(uint64_t ts,
+		qreal timeSinceLastRedraw = 0.0);
+	inline void handleChannelCofigurationChange();
 
 	QColor getBackgroundNominalColor() const;
 	void setBackgroundNominalColor(QColor c);
@@ -189,6 +186,7 @@ class VolumeMeterTimer : public QTimer {
 	Q_OBJECT
 
 public:
+	uint64_t lastRedrawTime = 0;
 	inline VolumeMeterTimer() : QTimer() {}
 
 	void AddVolControl(VolumeMeter *meter);
@@ -214,11 +212,7 @@ private:
 	QSlider *slider;
 	MuteCheckBox *mute;
 	QPushButton *config = nullptr;
-	float levelTotal;
-	float levelCount;
 	obs_fader_t *obs_fader;
-	obs_volmeter_t *obs_volmeter;
-	bool vertical;
 
 	static void OBSVolumeChanged(void *param, float db);
 	static void OBSVolumeLevel(void *data,

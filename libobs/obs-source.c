@@ -687,6 +687,7 @@ void obs_source_destroy(struct obs_source *source)
 	da_free(source->audio_actions);
 	da_free(source->audio_cb_list);
 	da_free(source->caption_cb_list);
+	da_free(source->audio_config_change_cb_list);
 	da_free(source->async_cache);
 	da_free(source->async_frames);
 	da_free(source->filters);
@@ -2948,6 +2949,35 @@ void obs_source_remove_caption_callback(obs_source_t *source,
 	pthread_mutex_unlock(&source->caption_cb_mutex);
 }
 
+void obs_source_add_audio_config_change_callback(obs_source_t *source,
+	obs_source_audio_config_change_t callback, void *param)
+{
+	struct audio_config_change_cb_info info = {callback, param};
+
+	if (!obs_source_valid(source,
+			      "obs_source_add_audio_config_change_callback"))
+		return;
+
+	pthread_mutex_lock(&source->audio_config_change_cb_mutex);
+	da_push_back(source->audio_config_change_cb_list, &info);
+	pthread_mutex_unlock(&source->audio_config_change_cb_mutex);
+}
+
+void obs_source_remove_audio_config_change_callback(obs_source_t *source,
+	obs_source_audio_config_change_t callback, void *param)
+{
+	struct audio_config_change_cb_info info = {callback, param};
+
+	if (!obs_source_valid(source,
+			      "obs_source_remove_audio_config_change_callback"))
+		return;
+
+	pthread_mutex_lock(&source->audio_config_change_cb_mutex);
+	da_erase_item(source->audio_config_change_cb_list, &info);
+	pthread_mutex_unlock(&source->audio_config_change_cb_mutex);
+}
+
+
 static inline bool preload_frame_changed(obs_source_t *source,
 					 const struct obs_source_frame *in)
 {
@@ -3168,6 +3198,14 @@ static inline void reset_resampler(obs_source_t *source,
 	source->sample_info.format = audio->format;
 	source->sample_info.samples_per_sec = audio->samples_per_sec;
 	source->sample_info.speakers = audio->speakers;
+
+	pthread_mutex_lock(&source->audio_config_change_cb_mutex);
+	for (size_t i = source->audio_config_change_cb_list.num; i > 0; i--) {
+		struct audio_config_change_cb_info info =
+			source->audio_config_change_cb_list.array[i - 1];
+		info.callback(info.param, source);
+	}
+	pthread_mutex_unlock(&source->audio_config_change_cb_mutex);
 
 	audio_resampler_destroy(source->resampler);
 	source->resampler = NULL;

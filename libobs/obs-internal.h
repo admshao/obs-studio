@@ -594,6 +594,11 @@ struct caption_cb_info {
 	void *param;
 };
 
+struct audio_config_change_cb_info {
+	obs_source_audio_config_change_t callback;
+	void *param;
+};
+
 struct obs_source {
 	struct obs_context_data context;
 	struct obs_source_info info;
@@ -699,6 +704,9 @@ struct obs_source {
 
 	pthread_mutex_t caption_cb_mutex;
 	DARRAY(struct caption_cb_info) caption_cb_list;
+
+	pthread_mutex_t audio_config_change_cb_mutex;
+	DARRAY(struct audio_config_change_cb_info) audio_config_change_cb_list;
 
 	/* async video deinterlacing */
 	uint64_t deinterlace_offset;

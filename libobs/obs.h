@@ -1133,6 +1133,14 @@ EXPORT void obs_source_remove_caption_callback(obs_source_t *source,
 					       obs_source_caption_t callback,
 					       void *param);
 
+typedef void (*obs_source_audio_config_change_t)(void *param,
+					obs_source_t *source);
+
+EXPORT void obs_source_add_audio_config_change_callback(obs_source_t *source,
+	obs_source_audio_config_change_t callback, void *param);
+EXPORT void obs_source_remove_audio_config_change_callback(obs_source_t *source,
+	obs_source_audio_config_change_t callback, void *param);
+
 enum obs_deinterlace_mode {
 	OBS_DEINTERLACE_MODE_DISABLE,
 	OBS_DEINTERLACE_MODE_DISCARD,
